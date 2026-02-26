@@ -6,6 +6,46 @@
     <title>Lokationen</title>
 
     <style>
+
+        /* --- Lade-Animation Overlay --- */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #0d0d0d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            animation: fadeOut 0.8s ease 1.2s forwards;
+        }
+
+        .spinner {
+            width: 42px;
+            height: 42px;
+            border: 4px solid #333;
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+
+        /* --- Fade-In des Inhalts --- */
+        body.fade-in {
+            opacity: 0;
+            transition: opacity 1s ease 0.3s;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
         /* --- Grunddesign (Dark Mode) --- */
         body {
             margin: 0;
@@ -20,9 +60,10 @@
         }
 
         h1 {
-            margin-top: 60px;
-            font-size: clamp(1.8rem, 4vw, 3rem);
-            letter-spacing: 1px;
+            margin-top: 80px;
+            font-size: clamp(2rem, 4vw, 3rem);
+            letter-spacing: 1.2px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.15);
         }
 
         .button-container {
@@ -34,7 +75,7 @@
             max-width: 420px;
         }
 
-        /* --- Animierte Buttons --- */
+        /* --- Animierte Buttons / Aurora Style --- */
         .btn {
             position: relative;
             padding: 18px 25px;
@@ -42,52 +83,50 @@
             text-decoration: none;
             font-size: 1.2rem;
             border-radius: 12px;
-            background: linear-gradient(145deg, #1a1a1a, #0b0b0b);
+            background: linear-gradient(145deg, #1a1a1a, #070707);
             color: white;
             border: 1px solid #2a2a2a;
             overflow: hidden;
-            transition: transform 0.2s ease, background 0.3s ease, border-color 0.3s ease;
+            transition: 0.25s ease;
+            box-shadow: 0 0 12px rgba(0,0,0,0.6);
         }
 
-        /* Hover Animation – Glow + leichte Bewegung */
         .btn:hover {
             transform: scale(1.05);
+            border-color: #666;
             background: linear-gradient(145deg, #222, #111);
-            border-color: #555;
+            box-shadow: 0 0 20px rgba(255,255,255,0.07);
         }
 
-        /* Klick-Animation */
         .btn:active {
-            transform: scale(0.97);
-            background: linear-gradient(145deg, #151515, #050505);
+            transform: scale(0.96);
         }
 
-        /* Glow-Effekt */
+        /* Glow Effekt */
         .btn::before {
             content: "";
             position: absolute;
-            top: -80%;
-            left: -80%;
-            width: 260%;
-            height: 260%;
-            background: radial-gradient(circle at center, rgba(255,255,255,0.12), transparent 60%);
+            top: -90%;
+            left: -90%;
+            width: 280%;
+            height: 280%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.13), transparent 60%);
             transform: scale(0);
-            transition: transform 0.4s ease;
+            transition: 0.45s ease;
         }
 
         .btn:hover::before {
             transform: scale(1);
         }
 
-        /* Mobile Optimization: Abstand unten */
-        @media (max-width: 600px) {
-            body {
-                padding-bottom: 40px;
-            }
-        }
     </style>
 </head>
-<body>
+<body class="fade-in">
+
+    <!-- Loader -->
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
 
     <h1>Lokationen</h1>
 
@@ -96,6 +135,12 @@
         <a class="btn" href="empg_schieber.html">EMPG Schieber</a>
         <a class="btn" href="gasunie_schieber.html">Gasunie Schieber</a>
     </div>
+
+    <script>
+        window.onload = () => {
+            document.body.classList.add("loaded");
+        };
+    </script>
 
 </body>
 </html>
