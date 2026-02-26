@@ -53,6 +53,23 @@
         background: linear-gradient(145deg, #222, #111);
     }
 
+    .back-btn {
+        display: inline-block;
+        margin-top: 40px;
+        padding: 14px 20px;
+        font-size: 1rem;
+        color: white;
+        border-radius: 12px;
+        text-decoration: none;
+        background: linear-gradient(145deg, #1a1a1a, #070707);
+        border: 1px solid #2a2a2a;
+        transition: 0.25s ease;
+    }
+    .back-btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(145deg, #222, #111);
+    }
+    
     .btn-container { margin-top: 15px; }
 
     /* Ergebnisbox */
@@ -88,12 +105,14 @@
         margin-top: 20px;
         width: 100%;
         border-collapse: collapse;
+        table-layout: auto; /* <<< Spalten richten sich nach Inhalt */
         display: none;
     }
     #dataTable th, #dataTable td {
         padding: 10px;
         border: 1px solid #333;
         background: #1a1a1a;
+        white-space: nowrap; /* <<< Keine Zeilen umbrechen */
     }
     #dataTable th {
         background: #222;
@@ -132,6 +151,8 @@
     <a href="#" id="resetSearch" class="btn" style="display:none; margin-left:10px;">Zurücksetzen</a>
 </div>
 
+<a href="index.html" class="back-btn" style="margin-top:40px; display:inline-block;">Zur Startseite</a>
+    
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
