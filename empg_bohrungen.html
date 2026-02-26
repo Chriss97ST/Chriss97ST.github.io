@@ -116,6 +116,20 @@
         background: #222;
         font-weight: bold;
     }
+    /* Tabellenzeilen: Hover / Fokus / Cursor */
+    #dataTable tbody tr {
+        cursor: pointer;
+        transition:  transform 0.08s ease;
+    }
+    #dataTable tbody tr:hover {
+        transform: scale(1.05);
+        outline: 2px solid #23a3ff;
+        background: #2a2a2a;
+    }
+    #dataTable tbody tr:focus {
+        outline: 2px solid #23a3ff;
+        background: #2a2a2a;
+    }
 </style>
 </head>
 <body>
@@ -189,6 +203,28 @@ function fillTable() {
             <td>${o.breite}</td>
             <td>${o.laenge}</td>
         `;
+        // Make the row clickable: insert Kürzel in search and process
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+            searchInput.value = o.kuerzel;
+            // trigger the input handler to show results
+            const ev = new Event('input', { bubbles: true });
+            searchInput.dispatchEvent(ev);
+            // also open the selected place directly (map + details)
+            selectOrt(o);
+            // scroll to top of page and focus the search field
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            searchInput.focus({ preventScroll: true });
+        });
+        // allow keyboard selection via Enter
+        row.tabIndex = 0;
+        row.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                row.click();
+            }
+        });
+
         tbody.appendChild(row);
     });
 }
