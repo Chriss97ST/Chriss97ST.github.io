@@ -15,6 +15,7 @@
         font-family: "Segoe UI", Arial, sans-serif;
         opacity: 0;
         transition: opacity 0.8s ease;
+        
     }
     body.loaded { opacity: 1; }
 
@@ -34,11 +35,13 @@
         font-size: 1.1rem;
     }
 
+
     /* Buttons */
-    .btn, .toggle-btn {
+    .btn {
         margin-top: 12px;
+        
         display: inline-block;
-        padding: 12px 18px;
+        padding: 15px;
         border-radius: 12px;
         background: linear-gradient(145deg, #1a1a1a, #070707);
         border: 1px solid #333;
@@ -47,15 +50,25 @@
         transition: 0.25s;
         cursor: pointer;
         user-select: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        display: inline-flex;
     }
-    .btn:hover, .toggle-btn:hover {
+    .btn:hover {
         transform: scale(1.05);
         background: linear-gradient(145deg, #222, #111);
     }
 
-    .btn-container { margin-top: 15px; }
+    .btn-container { display: block; margin-top: 5px; text-align: center; width: 100%; }
 
-    .btn-container-down { display:inline-block; margin-top: 40px; }
+    /* container for bottom buttons */
+    .btn-container-bottom {
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin-top: 0px;
+    }
 
     /* Ergebnisbox */
     .result-box {
@@ -107,7 +120,7 @@
 </head>
 <body>
 
-<h1 style="text-align: center;">EMPG Bohrungen - Ortsuche</h1>
+<h1 style="text-align: center;">|| EMPG Bohrungen ||<br>-= Ortsuche =-</h1>
 
 <div class="search-box">
     <input type="text" id="search" placeholder="Ort o. Kürzel eingeben...">
@@ -122,9 +135,9 @@
     <a href="#" id="resetSearch" class="btn" style="display:none; margin-left:10px;">Zurücksetzen</a>
 </div>
 
-<div class="btn-container-downside">    
-    <a href="index.html" class="btn">Zur Startseite</a>
-    <button id="toggleTable" class="toggle-btn" style="margin-left:10px;">2x -> Tabelle</button>
+<div class="btn-container-bottom">    
+    <a href="index.html" id="backBtn" class="btn">Zur Startseite</a>
+    <button id="toggleTable" class="btn" style="margin-left:10px;">2x -> Tabelle</button>
 </div>
 
 <table id="dataTable">
