@@ -1,0 +1,552 @@
+[
+    {
+        "ort":"Achim ",
+        "breite":53.027381,
+        "laenge":9.020634
+    },
+    {
+        "ort":"Barßel ",
+        "breite":53.138612,
+        "laenge":7.799443
+    },
+    {
+        "ort":"Bunder Tief",
+        "breite":53.207253,
+        "laenge":7.230656
+    },
+    {
+        "ort":"Dötlingen DTLN-Ü",
+        "breite":52.937537,
+        "laenge":8.332314
+    },
+    {
+        "ort":"Folmhusen ",
+        "breite":53.169731,
+        "laenge":7.543756
+    },
+    {
+        "ort":"Oude Statenzijl",
+        "breite":53.205619,
+        "laenge":7.211043
+    },
+    {
+        "ort":"Rysum ",
+        "breite":53.360669,
+        "laenge":7.067599
+    },
+    {
+        "ort":"UeIsen-UGS ",
+        "breite":52.504966,
+        "laenge":6.825619
+    },
+    {
+        "ort":"Wardenburg ",
+        "breite":53.073501,
+        "laenge":8.17104
+    },
+    {
+        "ort":"Ganderkesee ",
+        "breite":53.018089,
+        "laenge":8.464719
+    },
+    {
+        "ort":"Schneiderkrug ",
+        "breite":52.82021,
+        "laenge":8.230258
+    },
+    {
+        "ort":"Ahausen 141-S6",
+        "breite":53.006004,
+        "laenge":8.890533
+    },
+    {
+        "ort":"Ahle 04-S13.10",
+        "breite":52.193515,
+        "laenge":8.53756
+    },
+    {
+        "ort":"Albertushof 14-S19",
+        "breite":53.005909,
+        "laenge":8.648674
+    },
+    {
+        "ort":"Altenesch 02-AS9.1",
+        "breite":53.108327,
+        "laenge":8.638152
+    },
+    {
+        "ort":"Altharen 31-S6",
+        "breite":52.811301,
+        "laenge":7.168444
+    },
+    {
+        "ort":"Babenhausen ",
+        "breite":52.054382,
+        "laenge":8.494548
+    },
+    {
+        "ort":"Barkhausen 07-S11",
+        "breite":52.2818,
+        "laenge":8.414931
+    },
+    {
+        "ort":"Besenkam \/ Siele 04-S14",
+        "breite":52.16219,
+        "laenge":8.545099
+    },
+    {
+        "ort":"Bollen 14-AS23.30",
+        "breite":53.012005,
+        "laenge":8.928143
+    },
+    {
+        "ort":"Brual 31-S3",
+        "breite":53.100148,
+        "laenge":7.244152
+    },
+    {
+        "ort":"Brual 31-S3 Einfahrt",
+        "breite":53.100982,
+        "laenge":7.233841
+    },
+    {
+        "ort":"Bunde 31-S2",
+        "breite":53.185854,
+        "laenge":7.259749
+    },
+    {
+        "ort":"Bremen (ArceIorM.) St.w. 02-S13",
+        "breite":53.129478,
+        "laenge":8.691602
+    },
+    {
+        "ort":"Bremen (ArceIorM.) St.w. Tor-1",
+        "breite":53.139541,
+        "laenge":8.713077
+    },
+    {
+        "ort":"BremenOst (RG Alcan) 14-AS23.4",
+        "breite":53.023713,
+        "laenge":8.986059
+    },
+    {
+        "ort":"BremenSüd-1 Stadtwerke",
+        "breite":52.018708,
+        "laenge":8.909618
+    },
+    {
+        "ort":"Brendel 141-S4",
+        "breite":53.00727,
+        "laenge":8.627524
+    },
+    {
+        "ort":"Brinkum 141-S5 ",
+        "breite":53.025746,
+        "laenge":8.761194
+    },
+    {
+        "ort":"Dalum 31-S8",
+        "breite":52.600908,
+        "laenge":7.210088
+    },
+    {
+        "ort":"Damme 7-S6",
+        "breite":52.536281,
+        "laenge":8.230449
+    },
+    {
+        "ort":"Diepholz Stadtwerke 04-AS4.1",
+        "breite":52.60787,
+        "laenge":8.344925
+    },
+    {
+        "ort":"Dosenmoor 100-S3",
+        "breite":52.962306,
+        "laenge":7.704704
+    },
+    {
+        "ort":"Dreye",
+        "breite":53.005519,
+        "laenge":8.891512
+    },
+    {
+        "ort":"Drohne RG",
+        "breite":52.42915,
+        "laenge":8.350542
+    },
+    {
+        "ort":"Edewecht 14-S11",
+        "breite":53.103376,
+        "laenge":8.0101
+    },
+    {
+        "ort":"Edewecht-Nordmilch 143-AS3.1",
+        "breite":53.10658,
+        "laenge":7.987792
+    },
+    {
+        "ort":"Elbergen(Lingen) 100-S9 ",
+        "breite":52.458746,
+        "laenge":7.314745
+    },
+    {
+        "ort":"Elisabethfehn West 143-S2",
+        "breite":53.150433,
+        "laenge":7.691245
+    },
+    {
+        "ort":"Emden Bahndücker",
+        "breite":53.3429,
+        "laenge":7.215302
+    },
+    {
+        "ort":"Emden Eichstraße",
+        "breite":53.345818,
+        "laenge":7.201447
+    },
+    {
+        "ort":"Emden Kraftwerk EON",
+        "breite":53.340038,
+        "laenge":7.209259
+    },
+    {
+        "ort":"Emden Nesserlanderstr.",
+        "breite":53.347969,
+        "laenge":7.187726
+    },
+    {
+        "ort":"Emden VW 71-S3",
+        "breite":53.349531,
+        "laenge":7.181887
+    },
+    {
+        "ort":"E.M.S.(Gassco) 157-S1",
+        "breite":53.359209,
+        "laenge":7.014286
+    },
+    {
+        "ort":"Emsbüren I (Ruhrgas)",
+        "breite":52.389211,
+        "laenge":7.253011
+    },
+    {
+        "ort":"Emsbüren II (Tyssengas)",
+        "breite":52.389556,
+        "laenge":7.258454
+    },
+    {
+        "ort":"Emsbüren VEW-Lingen",
+        "breite":52.407724,
+        "laenge":7.248646
+    },
+    {
+        "ort":"EMS-West 14-S3",
+        "breite":53.181945,
+        "laenge":7.387269
+    },
+    {
+        "ort":"Enger 04-AS14.20",
+        "breite":52.139721,
+        "laenge":8.541631
+    },
+    {
+        "ort":"Esche 142-AS1.1",
+        "breite":52.531772,
+        "laenge":6.963249
+    },
+    {
+        "ort":"Folmhusen\/Breinermoor 14-S5",
+        "breite":53.180395,
+        "laenge":7.491871
+    },
+    {
+        "ort":"Friedrichsdorf 6-S2",
+        "breite":51.923073,
+        "laenge":8.511082
+    },
+    {
+        "ort":"Großfullen 31-S7",
+        "breite":52.698728,
+        "laenge":7.189372
+    },
+    {
+        "ort":"Haldem-Ost 159-S2",
+        "breite":52.430315,
+        "laenge":8.393678
+    },
+    {
+        "ort":"Harkebrügge 14-S9",
+        "breite":53.13327,
+        "laenge":7.824891
+    },
+    {
+        "ort":"Heede 31-S4",
+        "breite":53.003513,
+        "laenge":7.213553
+    },
+    {
+        "ort":"Herringhausen 7-S15",
+        "breite":52.133881,
+        "laenge":8.595352
+    },
+    {
+        "ort":"Hövelhof 06-S4 ",
+        "breite":51.836795,
+        "laenge":8.61014
+    },
+    {
+        "ort":"Holsen 08-S1",
+        "breite":52.10268,
+        "laenge":8.53058
+    },
+    {
+        "ort":"Holterfehn ?",
+        "breite":53.152224,
+        "laenge":7.651548
+    },
+    {
+        "ort":"Holzhausen 04-S12",
+        "breite":52.278981,
+        "laenge":8.53208
+    },
+    {
+        "ort":"Hüde 04-S7",
+        "breite":52.50998,
+        "laenge":8.39864
+    },
+    {
+        "ort":"Itterbeck EGM 158-S2",
+        "breite":52.502331,
+        "laenge":6.824486
+    },
+    {
+        "ort":"Kirchlengern 08-S3",
+        "breite":52.193462,
+        "laenge":8.646958
+    },
+    {
+        "ort":"Kirchlengern-Kraftwerk",
+        "breite":52.19562,
+        "laenge":8.647645
+    },
+    {
+        "ort":"Kroge 7-S5",
+        "breite":52.619146,
+        "laenge":8.276149
+    },
+    {
+        "ort":"Küstenkanal-Nord 14-S12",
+        "breite":53.095059,
+        "laenge":8.083706
+    },
+    {
+        "ort":"Leeste ",
+        "breite":53.015533,
+        "laenge":8.837848
+    },
+    {
+        "ort":"Leer-Logärfeld 71-S6",
+        "breite":53.232396,
+        "laenge":7.516826
+    },
+    {
+        "ort":"Lemförder Metall 07-AS7.3",
+        "breite":52.443746,
+        "laenge":8.331319
+    },
+    {
+        "ort":"Lohne-Abzweig 53-AS4.1",
+        "breite":52.675169,
+        "laenge":8.27621
+    },
+    {
+        "ort":"Lorup 100-S4",
+        "breite":52.888444,
+        "laenge":7.651023
+    },
+    {
+        "ort":"Mittellandkanal 04-S10",
+        "breite":52.345503,
+        "laenge":8.465837
+    },
+    {
+        "ort":"Neermoor 71-S5",
+        "breite":53.314981,
+        "laenge":7.451734
+    },
+    {
+        "ort":"Nordlohne 07-S4",
+        "breite":52.680618,
+        "laenge":8.271339
+    },
+    {
+        "ort":"Nüttermoor - Gasunie",
+        "breite":53.269203,
+        "laenge":7.491715
+    },
+    {
+        "ort":"Nüttermoor - EWE 89-S2",
+        "breite":53.258752,
+        "laenge":7.416188
+    },
+    {
+        "ort":"Ostenwalde 100-S5 ",
+        "breite":52.838615,
+        "laenge":7.583951
+    },
+    {
+        "ort":"Osterfeine 53-S6",
+        "breite":52.54553,
+        "laenge":8.266576
+    },
+    {
+        "ort":"Paderborn \/ Neuhaus 6-S6",
+        "breite":51.738686,
+        "laenge":8.727361
+    },
+    {
+        "ort":"Reiningen 07-AS7.1",
+        "breite":52.452584,
+        "laenge":8.319959
+    },
+    {
+        "ort":"Petkum 71-S4",
+        "breite":53.339554,
+        "laenge":7.28703
+    },
+    {
+        "ort":"Rysum PPC (Gassco) 909-S1",
+        "breite":53.358287,
+        "laenge":7.002604
+    },
+    {
+        "ort":"Sandkrug 14-S15",
+        "breite":53.064283,
+        "laenge":8.26264
+    },
+    {
+        "ort":"Schönemoor 02-S9",
+        "breite":53.094486,
+        "laenge":8.615576
+    },
+    {
+        "ort":"Schwartenpohl 142-S3",
+        "breite":52.550811,
+        "laenge":7.184199
+    },
+    {
+        "ort":"Sedelsberg 100-S2",
+        "breite":53.05164,
+        "laenge":7.747158
+    },
+    {
+        "ort":"Sennestadt 199-S2",
+        "breite":51.94396,
+        "laenge":8.566743
+    },
+    {
+        "ort":"Spreda 07-S2 ",
+        "breite":52.776206,
+        "laenge":8.238645
+    },
+    {
+        "ort":"Stade-Brunnenweg 45-S6",
+        "breite":53.601212,
+        "laenge":9.436384
+    },
+    {
+        "ort":"Statoil(Gassco Abg.) 71-AS1.30",
+        "breite":53.356054,
+        "laenge":7.005286
+    },
+    {
+        "ort":"Steinhagen 05-AS3.10",
+        "breite":52.011385,
+        "laenge":8.453782
+    },
+    {
+        "ort":"Stuhrbaum 14-S20",
+        "breite":53.01854,
+        "laenge":8.76169
+    },
+    {
+        "ort":"Südlohne 31-S9",
+        "breite":52.49778,
+        "laenge":7.209836
+    },
+    {
+        "ort":"Südweyhe 51-S6",
+        "breite":53.003244,
+        "laenge":8.903598
+    },
+    {
+        "ort":"Sundern 07-S9",
+        "breite":52.391389,
+        "laenge":8.38834
+    },
+    {
+        "ort":"Sustrum 31-S5 ",
+        "breite":52.909561,
+        "laenge":7.174327
+    },
+    {
+        "ort":"Theesen ",
+        "breite":52.061941,
+        "laenge":8.527286
+    },
+    {
+        "ort":"Thölstedt 19-S4",
+        "breite":52.866367,
+        "laenge":8.339597
+    },
+    {
+        "ort":"Ummeln 05-S4 ",
+        "breite":51.978512,
+        "laenge":8.459508
+    },
+    {
+        "ort":"Vechta 07-S3",
+        "breite":52.716332,
+        "laenge":8.254243
+    },
+    {
+        "ort":"Velthausen 142-S2 ",
+        "breite":52.534398,
+        "laenge":7.025842
+    },
+    {
+        "ort":"Vilsendorf II 05-AS1.10",
+        "breite":52.075804,
+        "laenge":8.539523
+    },
+    {
+        "ort":"Wachendorf 21-AS8.2",
+        "breite":52.537415,
+        "laenge":7.190524
+    },
+    {
+        "ort":"Weenermoor 14-S2 ",
+        "breite":53.190791,
+        "laenge":7.318236
+    },
+    {
+        "ort":"Wertherstraße 05-S3",
+        "breite":52.043212,
+        "laenge":8.466413
+    },
+    {
+        "ort":"Westerscheps 14-S10",
+        "breite":53.112093,
+        "laenge":7.919709
+    },
+    {
+        "ort":"Wimmer 07-S10",
+        "breite":52.33576,
+        "laenge":8.417946
+    },
+    {
+        "ort":"Wüsting 141-S2",
+        "breite":53.041227,
+        "laenge":8.315265
+    }
+]

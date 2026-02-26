@@ -1,0 +1,367 @@
+[
+    {
+        "ort":"Aldorf 135-S11",
+        "breite":52.738806,
+        "laenge":8.52291
+    },
+    {
+        "ort":"Aldorf 135-S11 Einfahrt",
+        "breite":52.735181,
+        "laenge":8.524681
+    },
+    {
+        "ort":"Altona 533-S1.25",
+        "breite":52.823097,
+        "laenge":8.414184
+    },
+    {
+        "ort":"Apeldorn Ltg. 92",
+        "breite":52.748762,
+        "laenge":7.360711
+    },
+    {
+        "ort":"Astrup 135-S5",
+        "breite":52.814792,
+        "laenge":8.319224
+    },
+    {
+        "ort":"Augustenfeld Ltg. 92",
+        "breite":52.767371,
+        "laenge":7.711458
+    },
+    {
+        "ort":"Barenburg 135-S19",
+        "breite":52.638708,
+        "laenge":8.80773
+    },
+    {
+        "ort":"Barnsdorf 135-S",
+        "breite":52.729087,
+        "laenge":8.53336
+    },
+    {
+        "ort":"Birkenbusch 02-S",
+        "breite":52.953938,
+        "laenge":8.42167
+    },
+    {
+        "ort":"Bobrink  135-S16",
+        "breite":52.657839,
+        "laenge":8.694744
+    },
+    {
+        "ort":"Bokel 55-S1",
+        "breite":52.79877,
+        "laenge":8.089357
+    },
+    {
+        "ort":"Breitenbruch 56-S1.15",
+        "breite":52.774138,
+        "laenge":8.357423
+    },
+    {
+        "ort":"Buchhorst 135-S17",
+        "breite":52.65065,
+        "laenge":8.72645
+    },
+    {
+        "ort":"Burland 135-S8",
+        "breite":52.808767,
+        "laenge":8.44003
+    },
+    {
+        "ort":"Denkmal 56-S3.20",
+        "breite":52.881153,
+        "laenge":8.331443
+    },
+    {
+        "ort":"Dillengrund 135-S18",
+        "breite":52.642295,
+        "laenge":8.769341
+    },
+    {
+        "ort":"Döhlen 56-S6.20",
+        "breite":52.964867,
+        "laenge":8.236505
+    },
+    {
+        "ort":"Dreeschfeldskamp 595-S2",
+        "breite":52.874168,
+        "laenge":8.377975
+    },
+    {
+        "ort":"Drohensweg 56S2.20",
+        "breite":52.850934,
+        "laenge":8.341958
+    },
+    {
+        "ort":"Dünsen 557-S2",
+        "breite":52.943757,
+        "laenge":8.655894
+    },
+    {
+        "ort":"Ellerbrock 115-S4",
+        "breite":52.909583,
+        "laenge":8.324863
+    },
+    {
+        "ort":"Emstek  55-S3",
+        "breite":52.813709,
+        "laenge":8.149323
+    },
+    {
+        "ort":"Emstek  55-S3 Einfahrt",
+        "breite":52.813268,
+        "laenge":8.145583
+    },
+    {
+        "ort":"Gartherweg 96-S2",
+        "breite":52.832517,
+        "laenge":8.179513
+    },
+    {
+        "ort":"Groß-Ippener 117-S2",
+        "breite":52.951301,
+        "laenge":8.632053
+    },
+    {
+        "ort":"Haasendaal  56-S2.25",
+        "breite":52.856808,
+        "laenge":8.328173
+    },
+    {
+        "ort":"Hahnenesch 135-S7",
+        "breite":52.824297,
+        "laenge":8.39851
+    },
+    {
+        "ort":"Hardt 135-S15",
+        "breite":52.669688,
+        "laenge":8.662357
+    },
+    {
+        "ort":"Heinefelde 385-S2",
+        "breite":52.918865,
+        "laenge":8.321798
+    },
+    {
+        "ort":"Hengstlage Man. II",
+        "breite":52.983706,
+        "laenge":8.213493
+    },
+    {
+        "ort":"Henstedter-Heide 117-S4",
+        "breite":52.952326,
+        "laenge":8.51133
+    },
+    {
+        "ort":"Hespenbusch ",
+        "breite":52.945716,
+        "laenge":8.309014
+    },
+    {
+        "ort":"Hollen  107-S3",
+        "breite":52.951162,
+        "laenge":8.278251
+    },
+    {
+        "ort":"Hünenheide 135-S10",
+        "breite":52.767202,
+        "laenge":8.505002
+    },
+    {
+        "ort":"Hüsingskamp 135-S3",
+        "breite":52.821995,
+        "laenge":8.228114
+    },
+    {
+        "ort":"Hunte 117-S7",
+        "breite":52.949394,
+        "laenge":8.340595
+    },
+    {
+        "ort":"Klausheide 135-S12",
+        "breite":52.712106,
+        "laenge":8.544551
+    },
+    {
+        "ort":"Kolonie Ahlhorn",
+        "breite":52.912855,
+        "laenge":8.196526
+    },
+    {
+        "ort":"Kolonie Lethe",
+        "breite":52.898245,
+        "laenge":8.194832
+    },
+    {
+        "ort":"Kronkamp 533-S2.05",
+        "breite":52.819415,
+        "laenge":8.386341
+    },
+    {
+        "ort":"Kuhweide",
+        "breite":52.953486,
+        "laenge":8.386663
+    },
+    {
+        "ort":"L72 ",
+        "breite":52.95229,
+        "laenge":8.415579
+    },
+    {
+        "ort":"Landwehr ",
+        "breite":52.779924,
+        "laenge":7.998279
+    },
+    {
+        "ort":"Lastrup Mobil ",
+        "breite":52.780248,
+        "laenge":7.898759
+    },
+    {
+        "ort":"Lastrup Ltg. 92",
+        "breite":52.777276,
+        "laenge":7.894127
+    },
+    {
+        "ort":"Lähden Ltg. 92",
+        "breite":52.756496,
+        "laenge":7.548573
+    },
+    {
+        "ort":"Mattheide ",
+        "breite":52.835958,
+        "laenge":8.356313
+    },
+    {
+        "ort":"Norddöllen 135-S4.06",
+        "breite":52.812229,
+        "laenge":8.310132
+    },
+    {
+        "ort":"Palmriede 135-S9",
+        "breite":52.7907,
+        "laenge":8.473559
+    },
+    {
+        "ort":"Sackriede ",
+        "breite":52.80939,
+        "laenge":8.374445
+    },
+    {
+        "ort":"Sage ",
+        "breite":52.929693,
+        "laenge":8.204466
+    },
+    {
+        "ort":"Schierholz 135-S13",
+        "breite":52.696075,
+        "laenge":8.582357
+    },
+    {
+        "ort":"Schollenmoor ",
+        "breite":52.957429,
+        "laenge":8.255213
+    },
+    {
+        "ort":"Schneiderkrug ",
+        "breite":52.821894,
+        "laenge":8.228202
+    },
+    {
+        "ort":"Sevelter Wiesen ",
+        "breite":52.795705,
+        "laenge":8.059738
+    },
+    {
+        "ort":"Sevelten West ",
+        "breite":52.807829,
+        "laenge":8.053343
+    },
+    {
+        "ort":"Sprekelshorst 135-S14",
+        "breite":52.681013,
+        "laenge":8.624197
+    },
+    {
+        "ort":"Stade-Brunnenweg 45-S6",
+        "breite":53.601212,
+        "laenge":9.436384
+    },
+    {
+        "ort":"Sulinger Bruch 135-S20",
+        "breite":52.632965,
+        "laenge":8.845909
+    },
+    {
+        "ort":"Visbeker Braut ",
+        "breite":52.892967,
+        "laenge":8.326086
+    },
+    {
+        "ort":"Voigtei Sauer 135-S21",
+        "breite":52.620207,
+        "laenge":8.88253
+    },
+    {
+        "ort":"Warnstedt ",
+        "breite":52.78864,
+        "laenge":8.030253
+    },
+    {
+        "ort":"Westeresch 135-S6",
+        "breite":52.822443,
+        "laenge":8.36509
+    },
+    {
+        "ort":"Wildeshausen 02-S3",
+        "breite":52.900812,
+        "laenge":8.399138
+    },
+    {
+        "ort":"Zur Goost",
+        "breite":52.959697,
+        "laenge":8.202721
+    },
+    {
+        "ort":"Dötlingen K\/EGM",
+        "breite":52.931637,
+        "laenge":8.324535
+    },
+    {
+        "ort":"Dötlingen UGS",
+        "breite":52.945468,
+        "laenge":8.355252
+    },
+    {
+        "ort":"Dötlingen M\/Ue",
+        "breite":52.937537,
+        "laenge":8.332314
+    },
+    {
+        "ort":"Groothusen GRTH Z06 Station",
+        "breite":53.3969444,
+        "laenge":7.0141667
+    },
+    {
+        "ort":"GK-EAA GK-EAA",
+        "breite":52.956978,
+        "laenge":8.224466
+    },
+    {
+        "ort":"Hespenbusch VDS",
+        "breite":52.945716,
+        "laenge":8.309014
+    },
+    {
+        "ort":"Uelsen UGS",
+        "breite":52.504828,
+        "laenge":6.825233
+    },
+    {
+        "ort":"Voigtei LZ",
+        "breite":52.601581,
+        "laenge":8.949022
+    }
+]
