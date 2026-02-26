@@ -1,11 +1,67 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
+<head>
     <meta charset="UTF-8">
-    <title>Meine erste GitHub Pages Seite</title>
-  </head>
-  <body>
-    <h1>Hallo Welt!</h1>
-    <p>Diese Seite läuft über GitHub Pages 🚀</p>
-  </body>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lokationen</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0e0e0e;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 60px;
+            font-size: 2.5rem;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .button-container {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .btn {
+            padding: 18px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            background: #1c1c1c;
+            color: white;
+            border: 1px solid #333;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: #333;
+            transform: scale(1.04);
+            border-color: #555;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Lokationen</h1>
+
+    <div class="button-container">
+        <a class="btn" href="bohrungen.html">EMPG Bohrungen</a>
+        <a class="btn" href="schieber.html">EMPG Schieber</a>
+        <a class="btn" href="gasunie.html">Gasunie Schieber</a>
+    </div>
+
+</body>
 </html>
