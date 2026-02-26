@@ -22,10 +22,7 @@
         margin-bottom: 20px;
     }
 
-    /* Suchfeld */
-    .search-box {
-        margin-bottom: 20px;
-    }
+    .search-box { margin-bottom: 20px; }
     .search-box input {
         width: 100%;
         padding: 12px;
@@ -36,7 +33,6 @@
         font-size: 1.1rem;
     }
 
-    /* Ergebnisbox */
     .result-box {
         margin-top: 20px;
         padding: 18px;
@@ -55,7 +51,6 @@
     }
     .result-item:hover { background: #222; }
 
-    /* Maps Button */
     .btn {
         margin-top: 15px;
         display: inline-block;
@@ -74,7 +69,6 @@
         background: linear-gradient(145deg, #222, #111);
     }
 
-    /* Zurück Button */
     .back-btn {
         display: inline-block;
         margin-top: 40px;
@@ -133,7 +127,7 @@ function fuzzySearch(query) {
     query = query.toLowerCase();
     let exact = orte.filter(o => o.kuerzel.toLowerCase() === query);
     if(exact.length) return exact;
-    return orte.filter(o => o.kuerzel.toLowerCase().includes(query) || o.name.toLowerCase().includes(query));
+    return orte.filter(o => o.kuerzel.toLowerCase().includes(query) || o.ort.toLowerCase().includes(query));
 }
 
 searchInput.addEventListener('input', () => {
@@ -155,7 +149,7 @@ searchInput.addEventListener('input', () => {
     matches.forEach(o => {
         const div = document.createElement('div');
         div.className = 'result-item';
-        div.textContent = `${o.name} (${o.kuerzel})`;
+        div.textContent = `${o.ort} (${o.kuerzel})`;
         div.addEventListener('click', () => selectOrt(o));
         resultsBox.appendChild(div);
     });
@@ -163,21 +157,21 @@ searchInput.addEventListener('input', () => {
 });
 
 function selectOrt(ort) {
-    resultsBox.innerHTML = `<strong>${ort.name} (${ort.kuerzel})</strong><br>GPS: ${ort.lat}, ${ort.lng}`;
+    resultsBox.innerHTML = `<strong>${ort.ort} (${ort.kuerzel})</strong><br>GPS: ${ort.breite}, ${ort.laenge}`;
     mapDiv.style.display = 'block';
     openMapsBtn.style.display = 'inline-block';
-    openMapsBtn.href = `https://www.google.com/maps?q=${ort.lat},${ort.lng}`;
+    openMapsBtn.href = `https://www.google.com/maps?q=${ort.breite},${ort.laenge}`;
     openMapsBtn.target = '_blank';
 
     if(!map){
-        map = L.map('map').setView([ort.lat, ort.lng], 13);
+        map = L.map('map').setView([ort.breite, ort.laenge], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
-        marker = L.marker([ort.lat, ort.lng]).addTo(map);
+        marker = L.marker([ort.breite, ort.laenge]).addTo(map);
     } else {
-        map.setView([ort.lat, ort.lng], 13);
-        marker.setLatLng([ort.lat, ort.lng]);
+        map.setView([ort.breite, ort.laenge], 13);
+        marker.setLatLng([ort.breite, ort.laenge]);
     }
 }
 </script>
