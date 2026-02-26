@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lokationen</title>
+
     <style>
+        /* --- Grunddesign (Dark Mode) --- */
         body {
             margin: 0;
             padding: 0;
-            background: #0e0e0e;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #fff;
+            background: #0d0d0d;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: white;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,8 +21,7 @@
 
         h1 {
             margin-top: 60px;
-            font-size: 2.5rem;
-            text-align: center;
+            font-size: clamp(1.8rem, 4vw, 3rem);
             letter-spacing: 1px;
         }
 
@@ -28,29 +29,62 @@
             margin-top: 40px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
             width: 90%;
-            max-width: 400px;
+            max-width: 420px;
         }
 
+        /* --- Animierte Buttons --- */
         .btn {
-            padding: 18px;
+            position: relative;
+            padding: 18px 25px;
             text-align: center;
             text-decoration: none;
             font-size: 1.2rem;
-            border-radius: 10px;
-            background: #1c1c1c;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #1a1a1a, #0b0b0b);
             color: white;
-            border: 1px solid #333;
-            transition: 0.3s;
+            border: 1px solid #2a2a2a;
+            overflow: hidden;
+            transition: transform 0.2s ease, background 0.3s ease, border-color 0.3s ease;
         }
 
+        /* Hover Animation – Glow + leichte Bewegung */
         .btn:hover {
-            background: #333;
-            transform: scale(1.04);
+            transform: scale(1.05);
+            background: linear-gradient(145deg, #222, #111);
             border-color: #555;
         }
 
+        /* Klick-Animation */
+        .btn:active {
+            transform: scale(0.97);
+            background: linear-gradient(145deg, #151515, #050505);
+        }
+
+        /* Glow-Effekt */
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: -80%;
+            left: -80%;
+            width: 260%;
+            height: 260%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.12), transparent 60%);
+            transform: scale(0);
+            transition: transform 0.4s ease;
+        }
+
+        .btn:hover::before {
+            transform: scale(1);
+        }
+
+        /* Mobile Optimization: Abstand unten */
+        @media (max-width: 600px) {
+            body {
+                padding-bottom: 40px;
+            }
+        }
     </style>
 </head>
 <body>
