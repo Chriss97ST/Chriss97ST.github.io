@@ -53,24 +53,9 @@
         background: linear-gradient(145deg, #222, #111);
     }
 
-    .back-btn {
-        display: inline-block;
-        margin-top: 40px;
-        padding: 14px 20px;
-        font-size: 1rem;
-        color: white;
-        border-radius: 12px;
-        text-decoration: none;
-        background: linear-gradient(145deg, #1a1a1a, #070707);
-        border: 1px solid #2a2a2a;
-        transition: 0.25s ease;
-    }
-    .back-btn:hover {
-        transform: scale(1.05);
-        background: linear-gradient(145deg, #222, #111);
-    }
-    
     .btn-container { margin-top: 15px; }
+
+    .btn-container-down { display:inline-block; margin-top: 40px; }
 
     /* Ergebnisbox */
     .result-box {
@@ -122,10 +107,10 @@
 </head>
 <body>
 
-<h1>EMPG Bohrungen - Ortsuche</h1>
+<h1 style="text-align: center;">EMPG Bohrungen - Ortsuche</h1>
 
 <div class="search-box">
-    <input type="text" id="search" placeholder="Ort-Kürzel eingeben...">
+    <input type="text" id="search" placeholder="Ort o. Kürzel eingeben...">
 </div>
 
 <div class="result-box" id="results"></div>
@@ -138,8 +123,8 @@
 </div>
 
 <div class="btn-container-downside">    
-    <a href="index.html" class="back-btn" style="margin-top:40px; display:inline-block;">Zur Startseite</a>
-    <button id="toggleTable" class="toggle-btn">2x -> Tabelle</button>
+    <a href="index.html" class="btn">Zur Startseite</a>
+    <button id="toggleTable" class="toggle-btn" style="margin-left:10px;">2x -> Tabelle</button>
 </div>
 
 <table id="dataTable">
