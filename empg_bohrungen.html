@@ -2,9 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EMPG Bohrungen</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
 <style>
     body {
@@ -23,7 +21,8 @@
         margin-bottom: 20px;
     }
 
-    .search-box { margin-bottom: 10px; }
+    /* Suchfeld */
+    .search-box { margin-bottom: 20px; }
     .search-box input {
         width: 100%;
         padding: 12px;
@@ -35,8 +34,7 @@
     }
 
     /* Buttons */
-    .btn, .toggle-btn {
-        margin-top: 12px;
+    .btn, .toggle-btn, .back-btn {
         display: inline-block;
         padding: 12px 18px;
         border-radius: 12px;
@@ -45,32 +43,14 @@
         text-decoration: none;
         color: white;
         transition: 0.25s;
+        overflow: hidden;
         cursor: pointer;
-        user-select: none;
     }
-    .btn:hover, .toggle-btn:hover {
+    .btn:hover, .toggle-btn:hover, .back-btn:hover {
         transform: scale(1.05);
         background: linear-gradient(145deg, #222, #111);
     }
-
-    .back-btn {
-        display: inline-block;
-        margin-top: 40px;
-        padding: 14px 20px;
-        font-size: 1rem;
-        color: white;
-        border-radius: 12px;
-        text-decoration: none;
-        background: linear-gradient(145deg, #1a1a1a, #070707);
-        border: 1px solid #2a2a2a;
-        transition: 0.25s ease;
-    }
-    .back-btn:hover {
-        transform: scale(1.05);
-        background: linear-gradient(145deg, #222, #111);
-    }
-    
-    .btn-container { margin-top: 15px; }
+    .back-btn { margin-top: 40px; }
 
     /* Ergebnisbox */
     .result-box {
@@ -81,205 +61,182 @@
         border: 1px solid #333;
         display: none;
     }
-    .result-item {
-        padding: 8px 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-bottom: 5px;
-        background: #1a1a1a;
-        transition: 0.2s;
-    }
-    .result-item:hover { background: #222; }
-
-    /* Karte 4:3 */
-    #map {
-        width: 100%;
-        aspect-ratio: 4/3;
-        margin-top: 15px;
-        border-radius: 12px;
-        display: none;
-    }
 
     /* Tabelle */
-    #dataTable {
+    table {
+        border-collapse: collapse;
         margin-top: 20px;
         width: 100%;
-        border-collapse: collapse;
-        table-layout: auto; /* <<< Spalten richten sich nach Inhalt */
-        display: none;
+        max-width: 100%;
     }
-    #dataTable th, #dataTable td {
-        padding: 10px;
+    table th, table td {
         border: 1px solid #333;
-        background: #1a1a1a;
-        white-space: nowrap; /* <<< Keine Zeilen umbrechen */
+        padding: 8px;
+        white-space: nowrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    #dataTable th {
-        background: #222;
-        font-weight: bold;
+
+    /* Kartenvorschau (4:3) */
+    #map {
+        width: 100%;
+        max-width: 600px;
+        aspect-ratio: 4 / 3;
+        border-radius: 12px;
+        margin-top: 20px;
+        display: none;
     }
 </style>
 </head>
 <body>
 
-<h1>EMPG Bohrungen - Ortsuche</h1>
+<h1>EMPG – Bohrungen Finder</h1>
 
 <div class="search-box">
-    <input type="text" id="search" placeholder="Ort-Kürzel eingeben...">
+    <input type="text" id="searchInput" placeholder="Ortskürzel eingeben …">
 </div>
 
-<button id="toggleTable" class="toggle-btn">Tabelle anzeigen</button>
+<button class="btn" onclick="performSearch()">Suchen</button>
+<button class="btn" onclick="resetSearch()">Zurücksetzen</button>
+<button class="toggle-btn" id="toggleTableBtn" onclick="toggleTable()">Tabelle anzeigen</button>
 
-<table id="dataTable">
-    <thead>
-        <tr>
-            <th>Ort</th>
-            <th>Kürzel</th>
-            <th>Breite</th>
-            <th>Länge</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
-
-<div class="result-box" id="results"></div>
+<div id="results" class="result-box"></div>
 
 <div id="map"></div>
 
-<div class="btn-container">
-    <a href="#" id="openMaps" class="btn" style="display:none;">Google Maps</a>
-    <a href="#" id="resetSearch" class="btn" style="display:none; margin-left:10px;">Zurücksetzen</a>
-</div>
-
-<a href="index.html" class="back-btn" style="margin-top:40px; display:inline-block;">Zur Startseite</a>
-    
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<a class="back-btn" href="index.html">Zurück</a>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.classList.add('loaded');
-});
+let jsonData = [];
+let tableVisible = false;
 
-let orte = [];
-fetch('empg_bohrungen.json')
-    .then(res => res.json())
-    .then(data => {
-        orte = data;
-        fillTable();
-    });
+/* JSON laden */
+fetch("empg_bohrungen.json")
+    .then(r => r.json())
+    .then(d => jsonData = d)
+    .catch(err => console.error("Fehler beim Laden:", err));
 
-const searchInput = document.getElementById('search');
-const resultsBox = document.getElementById('results');
-const mapDiv = document.getElementById('map');
-const openMapsBtn = document.getElementById('openMaps');
-const resetBtn = document.getElementById('resetSearch');
-const toggleTableBtn = document.getElementById('toggleTable');
-const table = document.getElementById('dataTable');
-let map, marker;
+window.onload = () => document.body.classList.add("loaded");
 
-/* Tabelle füllen */
-function fillTable() {
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = "";
+/* Suche starten */
+function performSearch() {
+    const q = document.getElementById("searchInput").value.trim().toLowerCase();
+    if (!q) return;
 
-    orte.forEach(o => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${o.ort}</td>
-            <td>${o.kuerzel}</td>
-            <td>${o.breite}</td>
-            <td>${o.laenge}</td>
-        `;
-        tbody.appendChild(row);
-    });
+    const exact = jsonData.filter(e => e.kuerzel.toLowerCase() === q);
+    const similar = jsonData.filter(e => e.kuerzel.toLowerCase().includes(q));
+
+    if (exact.length === 1) {
+        showResult(exact[0], false);
+    } else if (similar.length > 0) {
+        showList(similar, q);
+    } else {
+        showMessage("Keine Treffer gefunden.");
+    }
 }
 
-/* Tabelle ein-/ausblenden */
-toggleTableBtn.addEventListener('click', () => {
-    if (table.style.display === "none") {
-        table.style.display = "table";
-        toggleTableBtn.textContent = "Tabelle verstecken";
-    } else {
-        table.style.display = "none";
-        toggleTableBtn.textContent = "Tabelle anzeigen";
-    }
-});
+/* Einzelnes Ergebnis anzeigen */
+function showResult(item, fromList = false) {
+    const box = document.getElementById("results");
+    box.style.display = "block";
 
-/* Fuzzy Suche */
-function fuzzySearch(query) {
-    query = query.toLowerCase();
-    let exact = orte.filter(o => o.kuerzel.toLowerCase() === query);
-    if(exact.length) return exact;
+    box.innerHTML = `
+        <h2>${item.ort} (${item.kuerzel})</h2>
+        <p>Breite: ${item.breite}</p>
+        <p>Länge: ${item.laenge}</p>
 
-    return orte.filter(o =>
-        o.kuerzel.toLowerCase().includes(query) ||
-        o.ort.toLowerCase().includes(query)
-    );
+        <a class="btn" href="https://maps.google.com/?q=${item.breite},${item.laenge}" target="_blank">Google Maps</a>
+    `;
+
+    showMap(item.breite, item.laenge);
+
+    if (fromList) tableVisible = false;
 }
 
-/* Eingabe */
-searchInput.addEventListener('input', () => {
-    const query = searchInput.value.trim();
-    resultsBox.innerHTML = '';
-    resultsBox.style.display = 'none';
-    mapDiv.style.display = 'none';
-    openMapsBtn.style.display = 'none';
-    resetBtn.style.display = 'none';
+/* Liste ähnlicher Treffer */
+function showList(list, query) {
+    const box = document.getElementById("results");
+    box.style.display = "block";
+    document.getElementById("map").style.display = "none";
 
-    if(!query) return;
+    let html = `<h2>Keine exakte Übereinstimmung – ähnliche Treffer:</h2><ul>`;
 
-    const matches = fuzzySearch(query);
-
-    if(matches.length === 0){
-        resultsBox.innerHTML = '<div class="result-item">Keine Treffer</div>';
-        resultsBox.style.display = 'block';
-        return;
-    }
-
-    matches.forEach(o => {
-        const div = document.createElement('div');
-        div.className = 'result-item';
-        div.textContent = `${o.ort} (${o.kuerzel})`;
-        div.addEventListener('click', () => selectOrt(o));
-        resultsBox.appendChild(div);
+    list.forEach(e => {
+        html += `<li><a href="#" style="color:#4af" onclick='selectItem(${JSON.stringify(e)})'>
+                    ${e.ort} (${e.kuerzel})
+                 </a></li>`;
     });
 
-    resultsBox.style.display = 'block';
-});
+    html += "</ul>";
+    box.innerHTML = html;
+}
 
-/* Ort auswählen */
-function selectOrt(ort) {
-    resultsBox.innerHTML = `<strong>${ort.ort} (${ort.kuerzel})</strong><br>
-    GPS: ${ort.breite}, ${ort.laenge}`;
-    resultsBox.style.display = 'block';
+/* Eintrag aus Liste ausgewählt */
+function selectItem(item) {
+    showResult(item, true);
+}
 
-    mapDiv.style.display = 'block';
-    openMapsBtn.style.display = 'inline-block';
-    resetBtn.style.display = 'inline-block';
+/* Karte anzeigen */
+function showMap(lat, lon) {
+    const map = document.getElementById("map");
+    map.style.display = "block";
 
-    openMapsBtn.href = `https://www.google.com/maps?q=${ort.breite},${ort.laenge}`;
-    openMapsBtn.target = '_blank';
-
-    if(!map){
-        map = L.map('map').setView([ort.breite, ort.laenge], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-            .addTo(map);
-        marker = L.marker([ort.breite, ort.laenge]).addTo(map);
-    } else {
-        map.setView([ort.breite, ort.laenge], 13);
-        marker.setLatLng([ort.breite, ort.laenge]);
-    }
+    map.innerHTML = `
+        <iframe 
+            width="100%" 
+            height="100%" 
+            style="border:0; border-radius: 12px;"
+            loading="lazy"
+            allowfullscreen
+            src="https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01}%2C${lat-0.01}%2C${lon+0.01}%2C${lat+0.01}&layer=mapnik&marker=${lat}%2C${lon}">
+        </iframe>
+    `;
 }
 
 /* Reset */
-resetBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    searchInput.value = '';
-    resultsBox.style.display = 'none';
-    mapDiv.style.display = 'none';
-    openMapsBtn.style.display = 'none';
-    resetBtn.style.display = 'none';
-});
+function resetSearch() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("results").style.display = "none";
+    document.getElementById("map").style.display = "none";
+}
+
+/* Tabelle ein/ausblenden */
+function toggleTable() {
+    const btn = document.getElementById("toggleTableBtn");
+    const box = document.getElementById("results");
+
+    if (!tableVisible) {
+        let html = "<h2>Gesamte Tabelle:</h2><table><tr>";
+
+        const headers = ["ort", "kuerzel", "breite", "laenge"];
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += "</tr>";
+
+        jsonData.forEach(row => {
+            html += `<tr>
+                        <td>${row.ort}</td>
+                        <td>${row.kuerzel}</td>
+                        <td>${row.breite}</td>
+                        <td>${row.laenge}</td>
+                    </tr>`;
+        });
+
+        html += "</table>";
+
+        box.innerHTML = html;
+        box.style.display = "block";
+        document.getElementById("map").style.display = "none";
+
+        btn.textContent = "Tabelle verstecken";
+        tableVisible = true;
+
+    } else {
+        box.style.display = "none";
+        btn.textContent = "Tabelle anzeigen";
+        tableVisible = false;
+    }
+}
 </script>
 
 </body>
