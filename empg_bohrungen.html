@@ -1,91 +1,185 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMPG Bohrungen</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMPG Bohrungen</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+    body {
+        margin: 0;
+        padding: 25px;
+        background: #0d0d0d;
+        color: white;
+        font-family: "Segoe UI", Arial, sans-serif;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+    }
+    body.loaded { opacity: 1; }
 
-    <style>
-        body {
-            margin: 0;
-            padding: 25px;
-            background: #0d0d0d;
-            color: white;
-            font-family: "Segoe UI", Arial, sans-serif;
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
+    h1 {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        margin-bottom: 20px;
+    }
 
-        body.loaded {
-            opacity: 1;
-        }
+    /* Suchfeld */
+    .search-box {
+        margin-bottom: 20px;
+    }
+    .search-box input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        color: white;
+        font-size: 1.1rem;
+    }
 
-        h1 {
-            font-size: clamp(1.8rem, 4vw, 2.6rem);
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.15);
-        }
+    /* Ergebnisbox */
+    .result-box {
+        margin-top: 20px;
+        padding: 18px;
+        background: #111;
+        border-radius: 12px;
+        border: 1px solid #333;
+        display: none;
+    }
+    .result-item {
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 5px;
+        background: #1a1a1a;
+        transition: 0.2s;
+    }
+    .result-item:hover { background: #222; }
 
-        p {
-            font-size: 1.1rem;
-        }
+    /* Maps Button */
+    .btn {
+        margin-top: 15px;
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 12px;
+        background: linear-gradient(145deg, #1a1a1a, #070707);
+        border: 1px solid #333;
+        text-decoration: none;
+        color: white;
+        transition: 0.25s;
+        position: relative;
+        overflow: hidden;
+    }
+    .btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(145deg, #222, #111);
+    }
 
-        /* Zurück Button (gleicher Stil wie Hauptseite) */
-        .back-btn {
-            display: inline-block;
-            margin-top: 40px;
-            text-decoration: none;
-            padding: 14px 20px;
-            font-size: 1rem;
-            color: white;
-            border-radius: 12px;
-            background: linear-gradient(145deg, #1a1a1a, #070707);
-            border: 1px solid #2a2a2a;
-            position: relative;
-            overflow: hidden;
-            transition: 0.25s ease;
-        }
+    /* Zurück Button */
+    .back-btn {
+        display: inline-block;
+        margin-top: 40px;
+        padding: 14px 20px;
+        font-size: 1rem;
+        color: white;
+        border-radius: 12px;
+        text-decoration: none;
+        background: linear-gradient(145deg, #1a1a1a, #070707);
+        border: 1px solid #2a2a2a;
+        position: relative;
+        overflow: hidden;
+        transition: 0.25s ease;
+    }
+    .back-btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(145deg, #222, #111);
+    }
 
-        .back-btn:hover {
-            transform: scale(1.05);
-            background: linear-gradient(145deg, #222, #111);
-            border-color: #666;
-        }
-
-        .back-btn:active {
-            transform: scale(0.96);
-        }
-
-        .back-btn::before {
-            content: "";
-            position: absolute;
-            top: -90%;
-            left: -90%;
-            width: 280%;
-            height: 280%;
-            background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 60%);
-            transform: scale(0);
-            transition: 0.45s ease;
-        }
-
-        .back-btn:hover::before {
-            transform: scale(1);
-        }
-    </style>
+    #map { height: 300px; margin-top: 15px; border-radius: 12px; display: none; }
+</style>
 </head>
 <body>
 
-    <h1>EMPG Bohrungen</h1>
+<h1>EMPG Bohrungen - Ortsuche</h1>
 
-    <p>Hier kommt später dein Inhalt hin.</p>
+<div class="search-box">
+    <input type="text" id="search" placeholder="Ort-Kürzel eingeben...">
+</div>
 
-    <a class="back-btn" href="index.html">← Zurück</a>
+<div class="result-box" id="results"></div>
 
-    <script>
-        window.onload = () => {
-            document.body.classList.add("loaded");
-        };
-    </script>
+<div id="map"></div>
+<a href="#" id="openMaps" class="btn" style="display:none;">In Google Maps öffnen</a>
 
+<a href="index.html" class="back-btn">Zurück zur Übersicht</a>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('loaded');
+});
+
+let orte = [];
+fetch('empg_bohrungen.json')
+    .then(res => res.json())
+    .then(data => orte = data);
+
+const searchInput = document.getElementById('search');
+const resultsBox = document.getElementById('results');
+const mapDiv = document.getElementById('map');
+const openMapsBtn = document.getElementById('openMaps');
+let map, marker;
+
+function fuzzySearch(query) {
+    query = query.toLowerCase();
+    let exact = orte.filter(o => o.kuerzel.toLowerCase() === query);
+    if(exact.length) return exact;
+    return orte.filter(o => o.kuerzel.toLowerCase().includes(query) || o.name.toLowerCase().includes(query));
+}
+
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim();
+    resultsBox.innerHTML = '';
+    resultsBox.style.display = 'none';
+    mapDiv.style.display = 'none';
+    openMapsBtn.style.display = 'none';
+
+    if(!query) return;
+
+    const matches = fuzzySearch(query);
+    if(matches.length === 0){
+        resultsBox.innerHTML = '<div class="result-item">Keine Treffer</div>';
+        resultsBox.style.display = 'block';
+        return;
+    }
+
+    matches.forEach(o => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.textContent = `${o.name} (${o.kuerzel})`;
+        div.addEventListener('click', () => selectOrt(o));
+        resultsBox.appendChild(div);
+    });
+    resultsBox.style.display = 'block';
+});
+
+function selectOrt(ort) {
+    resultsBox.innerHTML = `<strong>${ort.name} (${ort.kuerzel})</strong><br>GPS: ${ort.lat}, ${ort.lng}`;
+    mapDiv.style.display = 'block';
+    openMapsBtn.style.display = 'inline-block';
+    openMapsBtn.href = `https://www.google.com/maps?q=${ort.lat},${ort.lng}`;
+    openMapsBtn.target = '_blank';
+
+    if(!map){
+        map = L.map('map').setView([ort.lat, ort.lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        marker = L.marker([ort.lat, ort.lng]).addTo(map);
+    } else {
+        map.setView([ort.lat, ort.lng], 13);
+        marker.setLatLng([ort.lat, ort.lng]);
+    }
+}
+</script>
 </body>
 </html>
