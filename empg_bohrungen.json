@@ -1,0 +1,836 @@
+[
+  {
+    "ort": "Bethermoor",
+    "kuerzel": "BTRM Z02",
+    "breite": 52.9325,
+    "laenge": 8.0538889
+  },
+  {
+    "ort": "Brettorf",
+    "kuerzel": "BRTF Z02a",
+    "breite": 52.9538889,
+    "laenge": 8.4569444
+  },
+  {
+    "ort": "Brinkholz",
+    "kuerzel": "BRHO Z02",
+    "breite": 52.9494444,
+    "laenge": 8.3836111
+  },
+  {
+    "ort": "Brinkholz",
+    "kuerzel": "BRHO Z03a",
+    "breite": 52.9408333,
+    "laenge": 8.3983333
+  },
+  {
+    "ort": "Brinkholz",
+    "kuerzel": "BRHO Z04",
+    "breite": 52.9494444,
+    "laenge": 8.3836111
+  },
+  {
+    "ort": "Cappeln",
+    "kuerzel": "CPLN Z01",
+    "breite": 52.7961111,
+    "laenge": 8.1025
+  },
+  {
+    "ort": "Cappeln",
+    "kuerzel": "CPLN Z02",
+    "breite": 52.8083333,
+    "laenge": 8.0969444
+  },
+  {
+    "ort": "Cappeln",
+    "kuerzel": "CPLN Z03",
+    "breite": 52.8005556,
+    "laenge": 8.0894444
+  },
+  {
+    "ort": "Cappeln",
+    "kuerzel": "CPLN Z04a",
+    "breite": 52.7852778,
+    "laenge": 8.1047222
+  },
+  {
+    "ort": "Cappeln",
+    "kuerzel": "CPLN Z05",
+    "breite": 52.8130205,
+    "laenge": 8.08871
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DO-O Z01",
+    "breite": 52.9058333,
+    "laenge": 8.38
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DO-O Z02",
+    "breite": 52.8811111,
+    "laenge": 8.4230556
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DTLN S",
+    "breite": 52.9315421,
+    "laenge": 8.323765
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DTLN Z03a",
+    "breite": 52.9225,
+    "laenge": 8.3394444
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DTLN Z08",
+    "breite": 52.9152778,
+    "laenge": 8.3236111
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DTLN Z12",
+    "breite": 52.9172222,
+    "laenge": 8.3125
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DTLN ZT13",
+    "breite": 52.9236111,
+    "laenge": 8.3313889
+  },
+  {
+    "ort": "Garrel",
+    "kuerzel": "GA H1",
+    "breite": 52.9361111,
+    "laenge": 8.0166667
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD T01",
+    "breite": 52.7933333,
+    "laenge": 8.3075
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD T02",
+    "breite": 52.7825,
+    "laenge": 8.3375
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z07",
+    "breite": 52.7672222,
+    "laenge": 8.3244444
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z09/23",
+    "breite": 52.7472222,
+    "laenge": 8.3091667
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z10",
+    "breite": 52.7672222,
+    "laenge": 8.3244444
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z11",
+    "breite": 52.7577778,
+    "laenge": 8.3219444
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z12",
+    "breite": 52.7886111,
+    "laenge": 8.3111111
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z13",
+    "breite": 52.813252,
+    "laenge": 8.273327
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z14",
+    "breite": 52.805291,
+    "laenge": 8.276178
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z15",
+    "breite": 52.7991667,
+    "laenge": 8.2444444
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z16",
+    "breite": 52.8011111,
+    "laenge": 8.2230556
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z17/21/22",
+    "breite": 52.7916667,
+    "laenge": 8.2766667
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z18",
+    "breite": 52.7711111,
+    "laenge": 8.2977778
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z19a",
+    "breite": 52.787413,
+    "laenge": 8.234437
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z20",
+    "breite": 52.7666667,
+    "laenge": 8.2791667
+  },
+  {
+    "ort": "Goldenstedt",
+    "kuerzel": "GOLD Z23",
+    "breite": 52.74697,
+    "laenge": 8.310642
+  },
+  {
+    "ort": "Greetsiel",
+    "kuerzel": "GS Z01",
+    "breite": 53.492961,
+    "laenge": 7.098155
+  },
+  {
+    "ort": "Groothusen",
+    "kuerzel": "GRTH Z06 Station",
+    "breite": 53.3969444,
+    "laenge": 7.0141667
+  },
+  {
+    "ort": "Hellbusch",
+    "kuerzel": "HELB Z01",
+    "breite": 52.94195,
+    "laenge": 8.28515
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Station",
+    "breite": 52.7778,
+    "laenge": 7.94399
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z01",
+    "breite": 52.7913889,
+    "laenge": 7.8980556
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z04",
+    "breite": 52.7688889,
+    "laenge": 7.9372222
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z05 Station",
+    "breite": 52.7708333,
+    "laenge": 7.9561111
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z06",
+    "breite": 52.776912,
+    "laenge": 7.9431999
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z08",
+    "breite": 52.785,
+    "laenge": 7.9488889
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z11",
+    "breite": 52.777212,
+    "laenge": 7.9443
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z11a",
+    "breite": 52.777212,
+    "laenge": 7.9443
+  },
+  {
+    "ort": "Hemmelte",
+    "kuerzel": "HMLT Z12",
+    "breite": 52.7708333,
+    "laenge": 7.9561111
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T01",
+    "breite": 53.000168,
+    "laenge": 8.200217
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T02",
+    "breite": 52.9797222,
+    "laenge": 8.2075
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T05",
+    "breite": 53.0113889,
+    "laenge": 8.225
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T08",
+    "breite": 52.99464,
+    "laenge": 8.209226
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T09a",
+    "breite": 52.994634,
+    "laenge": 8.232352
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T10",
+    "breite": 53.001491,
+    "laenge": 8.215218
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T12",
+    "breite": 53.006572,
+    "laenge": 8.20472
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T13",
+    "breite": 53.0094,
+    "laenge": 8.2153667
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T14",
+    "breite": 52.987549,
+    "laenge": 8.217963
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T15",
+    "breite": 52.992445,
+    "laenge": 8.216633
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL T16a",
+    "breite": 52.997598,
+    "laenge": 8.225216
+  },
+  {
+    "ort": "Hengstlage",
+    "kuerzel": "HGTL VDS",
+    "breite": 53.00026,
+    "laenge": 8.201075
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z01",
+    "breite": 53.024116,
+    "laenge": 8.220195
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z02",
+    "breite": 52.984565,
+    "laenge": 8.189982
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z03",
+    "breite": 53.017004,
+    "laenge": 8.205571
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z05",
+    "breite": 53.0152778,
+    "laenge": 8.1866667
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z06",
+    "breite": 53.01459,
+    "laenge": 8.22395
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z07",
+    "breite": 53.025238,
+    "laenge": 8.239034
+  },
+  {
+    "ort": "Hengstlage Nord",
+    "kuerzel": "HG-N Z08",
+    "breite": 52.982718,
+    "laenge": 8.215808
+  },
+  {
+    "ort": "Kirchseelte",
+    "kuerzel": "KR Z01a",
+    "breite": 52.9541667,
+    "laenge": 8.6658333
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z01",
+    "breite": 52.9327778,
+    "laenge": 8.6866667
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z02",
+    "breite": 52.9202778,
+    "laenge": 8.7086111
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z06/07",
+    "breite": 52.922281,
+    "laenge": 8.708382
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z04",
+    "breite": 52.9011111,
+    "laenge": 8.7094444
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z06",
+    "breite": 52.9202778,
+    "laenge": 8.7086111
+  },
+  {
+    "ort": "Klosterseelte",
+    "kuerzel": "KSTS Z07",
+    "breite": 52.9202778,
+    "laenge": 8.7086111
+  },
+  {
+    "ort": "Kneheim",
+    "kuerzel": "KNEH Z01",
+    "breite": 52.7972222,
+    "laenge": 7.9872222
+  },
+  {
+    "ort": "Kneheim",
+    "kuerzel": "KNEH Z02",
+    "breite": 52.7986111,
+    "laenge": 7.9722222
+  },
+  {
+    "ort": "Kneheim",
+    "kuerzel": "KNEH Z03",
+    "breite": 52.7925,
+    "laenge": 8.0086111
+  },
+  {
+    "ort": "Kneheim",
+    "kuerzel": "KNEH Z04",
+    "breite": 52.7972222,
+    "laenge": 8.0211111
+  },
+  {
+    "ort": "Kneheim",
+    "kuerzel": "KNEH Z05",
+    "breite": 52.7972222,
+    "laenge": 8.0211111
+  },
+  {
+    "ort": "Löningen",
+    "kuerzel": "LOE-SO 1",
+    "breite": 52.713888,
+    "laenge": 7.792914
+  },
+  {
+    "ort": "Löningen",
+    "kuerzel": "LOE-SO 2",
+    "breite": 52.708762,
+    "laenge": 7.795975
+  },
+  {
+    "ort": "Löningen West",
+    "kuerzel": "LOE-W 6",
+    "breite": 52.7361111,
+    "laenge": 7.6541667
+  },
+  {
+    "ort": "Löningen West",
+    "kuerzel": "LOE-W 7",
+    "breite": 52.7311111,
+    "laenge": 7.6625
+  },
+  {
+    "ort": "Manslagt",
+    "kuerzel": "MA Z01",
+    "breite": 52.6991667,
+    "laenge": 8.8744444
+  },
+  {
+    "ort": "Menslage",
+    "kuerzel": "ME Z07",
+    "breite": 52.6933333,
+    "laenge": 7.8066667
+  },
+  {
+    "ort": "Neerstedt",
+    "kuerzel": "NEER Z01",
+    "breite": 52.963065,
+    "laenge": 8.417762
+  },
+  {
+    "ort": "Neerstedt",
+    "kuerzel": "NEER Z03",
+    "breite": 52.9744444,
+    "laenge": 8.3769444
+  },
+  {
+    "ort": "Nutteln",
+    "kuerzel": "NUTL Z01",
+    "breite": 53.0086111,
+    "laenge": 8.4258333
+  },
+  {
+    "ort": "Obere Lethe",
+    "kuerzel": "Obere Lethe VDS",
+    "breite": 52.885959,
+    "laenge": 8.181424
+  },
+  {
+    "ort": "Ortholz",
+    "kuerzel": "ORTH S",
+    "breite": 52.961657,
+    "laenge": 8.572814
+  },
+  {
+    "ort": "Oythe",
+    "kuerzel": "OYTH Z03",
+    "breite": 52.7452778,
+    "laenge": 8.3208333
+  },
+  {
+    "ort": "Quadmoor",
+    "kuerzel": "QDMR Z02",
+    "breite": 52.7933333,
+    "laenge": 8.3852778
+  },
+  {
+    "ort": "Quadmoor",
+    "kuerzel": "QDMR Z04",
+    "breite": 52.7863889,
+    "laenge": 8.3891667
+  },
+  {
+    "ort": "Quadmoor",
+    "kuerzel": "QDMR Z05",
+    "breite": 52.790728,
+    "laenge": 8.379458
+  },
+  {
+    "ort": "Rechterfeld ",
+    "kuerzel": "RFLD Z03",
+    "breite": 52.8202778,
+    "laenge": 8.4419444
+  },
+  {
+    "ort": "Rechterfeld",
+    "kuerzel": "RFLD Z04",
+    "breite": 52.825571,
+    "laenge": 8.403535
+  },
+  {
+    "ort": "Sage",
+    "kuerzel": "SAGE Z03",
+    "breite": 52.9519444,
+    "laenge": 8.2080556
+  },
+  {
+    "ort": "Sage",
+    "kuerzel": "SAGE Z04",
+    "breite": 52.92269,
+    "laenge": 8.201711
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR S",
+    "breite": 52.956293,
+    "laenge": 8.171005
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z02",
+    "breite": 52.9652778,
+    "laenge": 8.1627778
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z04",
+    "breite": 53.0030556,
+    "laenge": 8.1772222
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z06",
+    "breite": 52.98,
+    "laenge": 8.155
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z08",
+    "breite": 52.9577778,
+    "laenge": 8.1705556
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z09",
+    "breite": 52.9438889,
+    "laenge": 8.1672222
+  },
+  {
+    "ort": "Sagermeer",
+    "kuerzel": "SGMR Z11",
+    "breite": 53.0163889,
+    "laenge": 8.1680556
+  },
+  {
+    "ort": "Sagermeer Süd",
+    "kuerzel": "SGMR-S Z02",
+    "breite": 52.9102778,
+    "laenge": 8.475
+  },
+  {
+    "ort": "Sagermeer S.-W.",
+    "kuerzel": "SGMR-SW Z01",
+    "breite": 52.924208,
+    "laenge": 8.121418
+  },
+  {
+    "ort": "Soltau",
+    "kuerzel": "Soltau Z04",
+    "breite": 53.038297,
+    "laenge": 9.811946
+  },
+  {
+    "ort": "Sottrum",
+    "kuerzel": "Sottrum Z01",
+    "breite": 53.127217,
+    "laenge": 9.269178
+  },
+  {
+    "ort": "Uttum",
+    "kuerzel": "UTUM Z01",
+    "breite": 53.4583333,
+    "laenge": 7.1397222
+  },
+  {
+    "ort": "Vahren",
+    "kuerzel": "VREN Z02",
+    "breite": 52.8138889,
+    "laenge": 7.9805556
+  },
+  {
+    "ort": "Vahrenesch",
+    "kuerzel": "VANS Z01",
+    "breite": 52.7705556,
+    "laenge": 8.4566667
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH S",
+    "breite": 52.86838,
+    "laenge": 8.311033
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z02",
+    "breite": 52.8608333,
+    "laenge": 8.3127778
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z03",
+    "breite": 52.8563889,
+    "laenge": 8.3216667
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z04",
+    "breite": 52.8502778,
+    "laenge": 8.3286111
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z05",
+    "breite": 52.8638889,
+    "laenge": 8.3108333
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z06",
+    "breite": 52.8636111,
+    "laenge": 8.3133333
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z08",
+    "breite": 52.866208,
+    "laenge": 8.310897
+  },
+  {
+    "ort": "Varnhorn",
+    "kuerzel": "VRNH Z10",
+    "breite": 52.8608333,
+    "laenge": 8.3116667
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Station",
+    "breite": 52.849275,
+    "laenge": 8.184092
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Sammellager",
+    "breite": 52.849619,
+    "laenge": 8.182749
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK VDS",
+    "breite": 52.8497222,
+    "laenge": 8.1769444
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z06",
+    "breite": 52.8136111,
+    "laenge": 8.2241667
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z07",
+    "breite": 52.8380556,
+    "laenge": 8.1811111
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z08",
+    "breite": 52.8538889,
+    "laenge": 8.2058333
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z09a",
+    "breite": 52.8438889,
+    "laenge": 8.1672222
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z10",
+    "breite": 52.8452778,
+    "laenge": 8.2133333
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z12c",
+    "breite": 52.8419444,
+    "laenge": 8.1947222
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z13",
+    "breite": 52.851983,
+    "laenge": 8.192282
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z16",
+    "breite": 52.8280556,
+    "laenge": 8.195
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z17",
+    "breite": 52.8477778,
+    "laenge": 8.2033333
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z20",
+    "breite": 52.8602778,
+    "laenge": 8.2122222
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z21",
+    "breite": 52.8169444,
+    "laenge": 8.2422222
+  },
+  {
+    "ort": "Visbek",
+    "kuerzel": "VSBK Z21a",
+    "breite": 52.8169444,
+    "laenge": 8.2422222
+  },
+  {
+    "ort": "Wiettingsmoor",
+    "kuerzel": "WIE H01",
+    "breite": 52.7075,
+    "laenge": 8.6472222
+  },
+  {
+    "ort": "Wiettingsmoor",
+    "kuerzel": "WIE H03",
+    "breite": 52.703773,
+    "laenge": 8.673252
+  },
+  {
+    "ort": "Wöstendöllen",
+    "kuerzel": "WSTD Z01",
+    "breite": 52.8238889,
+    "laenge": 8.3391667
+  },
+  {
+    "ort": "Wöstendöllen",
+    "kuerzel": "WSTD Z02a",
+    "breite": 52.8144444,
+    "laenge": 8.3297222
+  },
+  {
+    "ort": "Wöstendöllen",
+    "kuerzel": "WSTD Z03",
+    "breite": 52.8211111,
+    "laenge": 8.3488889
+  },
+  {
+    "ort": "Wöstendöllen",
+    "kuerzel": "WSTD Z04",
+    "breite": 52.8019444,
+    "laenge": 8.3566667
+  }
+]
