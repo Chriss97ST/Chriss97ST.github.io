@@ -1,91 +1,320 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMPG Schieber</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMPG Schieber</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-    <style>
-        body {
-            margin: 0;
-            padding: 25px;
-            background: #0d0d0d;
-            color: white;
-            font-family: "Segoe UI", Arial, sans-serif;
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
+<style>
+    body {
+        margin: 0;
+        padding: 25px;
+        background: #0d0d0d;
+        color: white;
+        font-family: "Segoe UI", Arial, sans-serif;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+        
+    }
+    body.loaded { opacity: 1; }
 
-        body.loaded {
-            opacity: 1;
-        }
+    h1 {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        margin-bottom: 20px;
+    }
 
-        h1 {
-            font-size: clamp(1.8rem, 4vw, 2.6rem);
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.15);
-        }
+    .search-box { margin-bottom: 10px; }
+    .search-box input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        color: white;
+        font-size: 1.1rem;
+    }
 
-        p {
-            font-size: 1.1rem;
-        }
 
-        /* Zurück Button (gleicher Stil wie Hauptseite) */
-        .back-btn {
-            display: inline-block;
-            margin-top: 40px;
-            text-decoration: none;
-            padding: 14px 20px;
-            font-size: 1rem;
-            color: white;
-            border-radius: 12px;
-            background: linear-gradient(145deg, #1a1a1a, #070707);
-            border: 1px solid #2a2a2a;
-            position: relative;
-            overflow: hidden;
-            transition: 0.25s ease;
-        }
+    /* Buttons */
+    .btn {
+        margin-top: 12px;
+        
+        display: inline-block;
+        padding: 15px;
+        border-radius: 12px;
+        background: linear-gradient(145deg, #1a1a1a, #070707);
+        border: 1px solid #333;
+        text-decoration: none;
+        color: white;
+        transition: 0.25s;
+        cursor: pointer;
+        user-select: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        display: inline-flex;
+    }
+    .btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(145deg, #222, #111);
+    }
 
-        .back-btn:hover {
-            transform: scale(1.05);
-            background: linear-gradient(145deg, #222, #111);
-            border-color: #666;
-        }
+    .btn-container { display: block; margin-top: 5px; text-align: center; width: 100%; }
 
-        .back-btn:active {
-            transform: scale(0.96);
-        }
+    /* container for bottom buttons */
+    .btn-container-bottom {
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin-top: 0px;
+    }
 
-        .back-btn::before {
-            content: "";
-            position: absolute;
-            top: -90%;
-            left: -90%;
-            width: 280%;
-            height: 280%;
-            background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 60%);
-            transform: scale(0);
-            transition: 0.45s ease;
-        }
+    /* Ergebnisbox */
+    .result-box {
+        margin-top: 20px;
+        padding: 18px;
+        background: #111;
+        border-radius: 12px;
+        border: 1px solid #333;
+        display: none;
+        text-align: center;
 
-        .back-btn:hover::before {
-            transform: scale(1);
-        }
-    </style>
+    }
+    .result-item {
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 5px;
+        background: #1a1a1a;
+        transition: 0.2s;
+    }
+    .result-item:hover { background: #222; }
+
+    /* Karte 4:3 */
+    #map {
+        width: 100%;
+        aspect-ratio: 4/3;
+        margin-top: 15px;
+        border-radius: 12px;
+        display: none;
+    }
+
+    /* Tabelle */
+    #dataTable {
+        margin-top: 20px;
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto; /* <<< Spalten richten sich nach Inhalt */
+        display: none;
+    }
+    #dataTable th, #dataTable td {
+        padding: 10px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        white-space: nowrap; /* <<< Keine Zeilen umbrechen */
+    }
+    #dataTable th {
+        background: #222;
+        font-weight: bold;
+    }
+    /* Tabellenzeilen: Hover / Fokus / Cursor */
+    #dataTable tbody tr {
+        cursor: pointer;
+        transition:  transform 0.08s ease;
+    }
+    #dataTable tbody tr:hover {
+        transform: scale(1.05);
+        outline: 2px solid #23a3ff;
+        background: #2a2a2a;
+    }
+    #dataTable tbody tr:focus {
+        outline: 2px solid #23a3ff;
+        background: #2a2a2a;
+    }
+</style>
 </head>
 <body>
 
-    <h1>EMPG Schieber</h1>
+<h1 style="text-align: center;">|| EMPG Schieber ||<br>-= Ortsuche =-</h1>
 
-    <p>Hier kommt später dein Inhalt hin.</p>
+<div class="search-box">
+    <input type="text" id="search" placeholder="Lokation / Ort eingeben...">
+</div>
 
-    <a class="back-btn" href="index.html">← Zurück</a>
+<div class="result-box" id="results"></div>
 
-    <script>
-        window.onload = () => {
-            document.body.classList.add("loaded");
-        };
-    </script>
+<div id="map"></div>
+
+<div class="btn-container">
+    <a href="#" id="openMaps" class="btn" style="display:none;">Google Maps</a>
+    <a href="#" id="resetSearch" class="btn" style="display:none; margin-left:10px;">Zurücksetzen</a>
+</div>
+
+<div class="btn-container-bottom">    
+    <a href="index.html" id="backBtn" class="btn">Zur Startseite</a>
+    <button id="toggleTable" class="btn" style="margin-left:10px;">2x -> Tabelle</button>
+</div>
+
+<table id="dataTable">
+    <thead>
+        <tr>
+            <th>Ort</th>
+            <th>Breite</th>
+            <th>Länge</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+    
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('loaded');
+});
+
+let orte = [];
+fetch('empg_schieber.json')
+    .then(res => res.json())
+    .then(data => {
+        orte = data;
+        fillTable();
+    });
+
+const searchInput = document.getElementById('search');
+const resultsBox = document.getElementById('results');
+const mapDiv = document.getElementById('map');
+const openMapsBtn = document.getElementById('openMaps');
+const resetBtn = document.getElementById('resetSearch');
+const toggleTableBtn = document.getElementById('toggleTable');
+const table = document.getElementById('dataTable');
+let map, marker;
+
+/* Tabelle füllen */
+function fillTable() {
+    const tbody = table.querySelector('tbody');
+    tbody.innerHTML = "";
+
+    orte.forEach(o => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${o.ort}</td>
+             <td>${o.breite.toFixed(7)}</td>
+            <td>${o.laenge.toFixed(7)}</td>
+        `;
+        // Make the row clickable: insert Kürzel in search and process
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+            searchInput.value = o.ort;
+            // trigger the input handler to show results
+            const ev = new Event('input', { bubbles: true });
+            searchInput.dispatchEvent(ev);
+            // also open the selected place directly (map + details)
+            selectOrt(o);
+            // scroll to top of page and focus the search field
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            searchInput.focus({ preventScroll: true });
+        });
+        // allow keyboard selection via Enter
+        row.tabIndex = 0;
+        row.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                row.click();
+            }
+        });
+
+        tbody.appendChild(row);
+    });
+}
+
+/* Tabelle ein-/ausblenden */
+toggleTableBtn.addEventListener('click', () => {
+    if (table.style.display === "none") {
+        table.style.display = "table";
+        toggleTableBtn.textContent = "Tabelle verstecken";
+    } else {
+        table.style.display = "none";
+        toggleTableBtn.textContent = "Tabelle anzeigen";
+    }
+});
+
+/* Fuzzy Suche */
+function fuzzySearch(query) {
+    query = query.toLowerCase();
+    let exact = orte.filter(o => o.ort.toLowerCase() === query);
+    if(exact.length) return exact;
+
+    return orte.filter(o =>
+        o.ort.toLowerCase().includes(query)
+    );
+}
+
+/* Eingabe */
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim();
+    resultsBox.innerHTML = '';
+    resultsBox.style.display = 'none';
+    mapDiv.style.display = 'none';
+    openMapsBtn.style.display = 'none';
+    resetBtn.style.display = 'none';
+
+    if(!query) return;
+
+    const matches = fuzzySearch(query);
+
+    if(matches.length === 0){
+        resultsBox.innerHTML = '<div class="result-item">Keine Treffer</div>';
+        resultsBox.style.display = 'block';
+        return;
+    }
+
+    matches.forEach(o => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.textContent = `${o.ort}`;
+        div.addEventListener('click', () => selectOrt(o));
+        resultsBox.appendChild(div);
+    });
+
+    resultsBox.style.display = 'block';
+});
+
+/* Ort auswählen */
+function selectOrt(ort) {
+    resultsBox.innerHTML = `<strong><u>${ort.ort}</u></strong><br>
+    GPS: N° ${ort.breite.toFixed(7)}, O° ${ort.laenge.toFixed(7)}`;
+    resultsBox.style.display = 'block';
+
+    mapDiv.style.display = 'block';
+    openMapsBtn.style.display = 'inline-block';
+    resetBtn.style.display = 'inline-block';
+
+    openMapsBtn.href = `https://www.google.com/maps?q=${ort.breite.toFixed(7)},${ort.laenge.toFixed(7)}`;
+    openMapsBtn.target = '_blank';
+
+    if(!map){
+        map = L.map('map').setView([ort.breite, ort.laenge], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+            .addTo(map);
+        marker = L.marker([ort.breite, ort.laenge]).addTo(map);
+    } else {
+        map.setView([ort.breite, ort.laenge], 13);
+        marker.setLatLng([ort.breite, ort.laenge]);
+    }
+}
+
+/* Reset */
+resetBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    searchInput.value = '';
+    resultsBox.style.display = 'none';
+    mapDiv.style.display = 'none';
+    openMapsBtn.style.display = 'none';
+    resetBtn.style.display = 'none';
+});
+</script>
 
 </body>
 </html>

@@ -78,6 +78,7 @@
         border-radius: 12px;
         border: 1px solid #333;
         display: none;
+        text-align: center;
     }
     .result-item {
         padding: 8px 12px;
@@ -137,7 +138,7 @@
 <h1 style="text-align: center;">|| EMPG Bohrungen ||<br>-= Ortsuche =-</h1>
 
 <div class="search-box">
-    <input type="text" id="search" placeholder="Ort o. Kürzel eingeben...">
+    <input type="text" id="search" placeholder="Ort / Kürzel eingeben...">
 </div>
 
 <div class="result-box" id="results"></div>
@@ -200,8 +201,8 @@ function fillTable() {
         row.innerHTML = `
             <td>${o.ort}</td>
             <td>${o.kuerzel}</td>
-            <td>${o.breite}</td>
-            <td>${o.laenge}</td>
+            <td>${o.breite.toFixed(7)}</td>
+            <td>${o.laenge.toFixed(7)}</td>
         `;
         // Make the row clickable: insert Kürzel in search and process
         row.style.cursor = 'pointer';
@@ -284,15 +285,15 @@ searchInput.addEventListener('input', () => {
 
 /* Ort auswählen */
 function selectOrt(ort) {
-    resultsBox.innerHTML = `<strong>${ort.ort} (${ort.kuerzel})</strong><br>
-    GPS: ${ort.breite}, ${ort.laenge}`;
+    resultsBox.innerHTML = `<strong><u>${ort.ort} (${ort.kuerzel})</u></strong><br>
+    GPS: N° ${ort.breite.toFixed(7)}, O° ${ort.laenge.toFixed(7)}`;
     resultsBox.style.display = 'block';
 
     mapDiv.style.display = 'block';
     openMapsBtn.style.display = 'inline-block';
     resetBtn.style.display = 'inline-block';
 
-    openMapsBtn.href = `https://www.google.com/maps?q=${ort.breite},${ort.laenge}`;
+    openMapsBtn.href = `https://www.google.com/maps?q=${ort.breite.toFixed(7)},${ort.laenge.toFixed(7)}`;
     openMapsBtn.target = '_blank';
 
     if(!map){
