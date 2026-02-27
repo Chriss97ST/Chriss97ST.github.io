@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Willkommen</title>
+    <title>Hobbyprojekt</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -14,43 +14,44 @@
         }
 
         body {
-            height: 100vh;
+            min-height: 100vh;
             background: radial-gradient(circle at top, #1f1f1f, #0d0d0d 70%);
             color: #ffffff;
             display: flex;
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding: 20px;
+            padding: 30px 20px;
         }
 
         .container {
-            max-width: 700px;
+            max-width: 800px;
             width: 100%;
             animation: fadeIn 1.2s ease-in-out;
         }
 
         h1 {
             font-size: clamp(2rem, 5vw, 3rem);
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             font-weight: 700;
         }
 
         p {
-            font-size: clamp(1rem, 2.5vw, 1.2rem);
-            margin-bottom: 40px;
+            font-size: clamp(1rem, 2.5vw, 1.15rem);
             color: #bbbbbb;
+            line-height: 1.8;
+            margin-bottom: 25px;
         }
 
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        .highlight {
+            color: #00ffff;
+            font-weight: 600;
         }
 
         .btn {
-            position: relative;
-            padding: 15px 25px;
+            display: inline-block;
+            margin-top: 40px;
+            padding: 15px 30px;
             font-size: 1rem;
             font-weight: 600;
             color: #ffffff;
@@ -60,6 +61,7 @@
             cursor: pointer;
             text-decoration: none;
             transition: all 0.3s ease;
+            position: relative;
             overflow: hidden;
         }
 
@@ -94,26 +96,37 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        @media (min-width: 600px) {
-            .button-group {
-                flex-direction: row;
-                justify-content: center;
-            }
-
-            .btn {
-                width: 200px;
-            }
+        .btn-container-back {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            /* keep button size consistent */
+            display: flex;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Willkommen,<br>willkommen...</h1>
-        <p>...auf meinem digitalen Sandkasten.</p>
-        <div class="button-group">
-            <a href="wtf.html" class="btn">What the F#*!</a>
-            <a href="suchmaschine_index.html" class="btn">BiLFiNGER || @WORK</a>
-        </div>
+        <h1>Ein persönliches Hobbyprojekt</h1>
+        <p>
+            Diese Webseite ist ein <span class="highlight">privates Hobbyprojekt</span>, entstanden aus reiner
+            Leidenschaft für das Programmieren in meiner Freizeit.
+        </p>
+        <p>
+            Was ursprünglich als kleines Experiment begann, hat sich mit der Zeit zu einem
+            <span class="highlight">modernen und leistungsstarken Tool</span> entwickelt,
+            das inzwischen meine hauptberufliche Arbeit aktiv unterstützt.
+        </p>
+        <p>
+            Sehr gerne möchte ich dieses Projekt mit allen Kolleginnen und Kollegen teilen –
+            in der Hoffnung, dass daraus neue Ideen entstehen. Vielleicht ergeben sich daraus
+            spannende Erweiterungen oder sogar ganz neue Projekte, die mir neue Möglichkeiten
+            bieten, meine Begeisterung für das Entwickeln weiter auszuleben.
+        </p>  
     </div>
+    
+    <div class="btn-container-back">    
+            <a href="index.html" id="backBtn" class="btn">&#128072; Zurück</a>
+    </div>  
 </body>
 </html>
