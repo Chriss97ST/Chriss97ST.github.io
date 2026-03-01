@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dark Chat</title>
+  <style>
+    /* dark theme base */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #121212;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      position: relative;
+      padding-bottom: 5rem;
+    }
+
+    h1 {
+      margin: 1rem 0;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 800px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* auth panel */
+    #auth {
+      margin-top: 2rem;
+      animation: fadeIn 0.5s;
+    }
+
+    /* mode buttons side by side */
+    .mode-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 0.8rem;
+      border: 2px solid #387ff5;
+      border-radius: 4px;
+      background: transparent;
+      color: #387ff5;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: bold;
+    }
+
+    .mode-btn:hover {
+      background: #387ff5;
+      color: #fff;
+    }
+
+    .mode-btn.active {
+      background: #387ff5;
+      color: #fff;
+    }
+
+    form {
+      display: none;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+
+    form.active {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border: none;
+      border-radius: 4px;
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    button {
+      padding: 0.6rem;
+      border: none;
+      border-radius: 4px;
+      background: #387ff5;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background: #2e6fd1;
+    }
+
+    /* guest join button */
+    #guest-btn {
+      margin-top: 1rem;
+    }
+
+    #error {
+      color: #f55;
+      min-height: 1.2em;
+      margin-bottom: 1rem;
+    }
+
+    #chat {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      margin-top: 1rem;
+    }
+
+    /* Top buttons */
+    .top-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .top-btn {
+      padding: 0.5rem 1rem;
+      background: #387ff5;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s ease;
+    }
+
+    .top-btn:hover {
+      background: #2e6fd1;
+    }
+
+    .chat-mode-indicator {
+      padding: 0.5rem 1rem;
+      background: #1e1e1e;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      flex: 1;
+      text-align: center;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+      animation: slideIn 0.3s ease;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+    }
+
+    .close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #f55;
+    }
+
+    .close:hover {
+      color: #ff8888;
+    }
+
+    .user-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .user-list li {
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      background: #121212;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .user-list li:hover {
+      background: #2a2a2a;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    #messages {
+      flex: 1;
+      background: #1e1e1e;
+      border-radius: 4px;
+      padding: 0.5rem;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin: 0.2rem 0;
+      animation: fadeIn 0.3s;
+    }
+
+    #input-area {
+      display: flex;
+      margin-top: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    #input {
+      flex: 1;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 4px;
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    /* back button */
+    .back-btn {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      padding: 0.6rem 1rem;
+      background: #387ff5;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .back-btn:hover {
+      background: #2e6fd1;
+    }
+
+    /* footer container */
+    .footer-buttons {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      display: none;
+    }
+
+    .footer-buttons.show {
+      display: flex;
+    }
+
+    .footer-btn {
+      padding: 0.6rem 1rem;
+      background: #387ff5;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .footer-btn:hover {
+      background: #2e6fd1;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      #input-area { flex-direction: column; }
+      #input { margin-bottom: 0; }
+      .mode-buttons { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Dark Chat</h1>
+  <div class="container">
+    <div id="auth">
+      <div id="error"></div>
+      
+      <!-- Mode selection buttons -->
+      <div class="mode-buttons">
+        <button class="mode-btn" id="login-mode-btn">Login</button>
+        <button class="mode-btn" id="register-mode-btn">Registrieren</button>
+      </div>
+
+      <!-- Login form -->
+      <form id="login-form">
+        <input id="login-user" type="text" placeholder="Benutzername" required />
+        <input id="login-pass" type="password" placeholder="Passwort" required />
+        <button type="submit">Anmelden</button>
+      </form>
+
+      <!-- Register form -->
+      <form id="register-form">
+        <input id="reg-user" type="text" placeholder="Neuer Benutzername" required />
+        <input id="reg-pass" type="password" placeholder="Passwort" required />
+        <button type="submit">Registrieren</button>
+      </form>
+
+      <!-- Guest button always visible -->
+      <button id="guest-btn">Als Gast beitreten</button>
+    </div>
+
+    <div id="chat">
+      <div class="top-buttons">
+        <button class="top-btn" id="online-users-btn">👥 Online</button>
+        <button class="top-btn" id="private-chats-btn">💬 Chats</button>
+        <div class="chat-mode-indicator" id="chat-mode">Öffentlicher Chat</div>
+      </div>
+      <div id="messages"></div>
+      <div id="input-area">
+        <input id="input" type="text" placeholder="Nachricht eingeben" autocomplete="off" />
+        <button id="send">Senden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Online Users Modal -->
+  <div id="online-users-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="close-online-users">&times;</span>
+      <h2>Online Benutzer</h2>
+      <ul id="online-users-list" class="user-list"></ul>
+    </div>
+  </div>
+
+  <!-- Private Chats Modal -->
+  <div id="private-chats-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="close-private-chats">&times;</span>
+      <h2>Private Chats</h2>
+      <ul id="private-chats-list" class="user-list"></ul>
+      <button id="back-to-public-btn" style="width: 100%; margin-top: 1rem;">← Zurück zum öffentlichen Chat</button>
+    </div>
+  </div>
+
+  <!-- Footer Buttons -->
+  <div class="footer-buttons show">
+    <a href="/index.html" class="footer-btn">🏠 Hauptseite</a>
+    <button id="logout-btn" class="footer-btn">🚪 Logout</button>
+  </div>
+
+  <script>
+    // Backend configuration
+    const BACKEND_URL = 'http://chriss97st.ddns.net:8000';
+    const WS_URL = 'ws://chriss97st.ddns.net:8000';
+
+    let ws;
+    let currentUser;
+    let currentToken;
+    let activeMode = null;
+    let currentChat = null; // null = public, username = private chat
+    let privateChats = new Set(); // usernames we have private chats with
+
+    function showError(msg) {
+      document.getElementById('error').textContent = msg;
+    }
+
+    function setMode(mode) {
+      activeMode = mode;
+      
+      // Update button styles
+      const loginBtn = document.getElementById('login-mode-btn');
+      const registerBtn = document.getElementById('register-mode-btn');
+      
+      if (mode === 'login') {
+        loginBtn.classList.add('active');
+        registerBtn.classList.remove('active');
+        document.getElementById('login-form').classList.add('active');
+        document.getElementById('register-form').classList.remove('active');
+      } else if (mode === 'register') {
+        registerBtn.classList.add('active');
+        loginBtn.classList.remove('active');
+        document.getElementById('register-form').classList.add('active');
+        document.getElementById('login-form').classList.remove('active');
+      }
+    }
+
+    async function request(path, body) {
+      const res = await fetch(BACKEND_URL + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || res.statusText);
+      }
+      return res.json();
+    }
+
+    // Mode buttons
+    document.getElementById('login-mode-btn').addEventListener('click', () => setMode('login'));
+    document.getElementById('register-mode-btn').addEventListener('click', () => setMode('register'));
+
+    // Login form submit
+    document.getElementById('login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        const data = await request('/login', {
+          username: document.getElementById('login-user').value,
+          password: document.getElementById('login-pass').value,
+        });
+        currentUser = data.username;
+        currentToken = data.access_token;
+        startChat();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    // Register form submit
+    document.getElementById('register-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        await request('/register', {
+          username: document.getElementById('reg-user').value,
+          password: document.getElementById('reg-pass').value,
+        });
+        showError('Registrierung erfolgreich! Bestelog dich jetzt ...');
+        // pre-fill login form and switch to login mode
+        document.getElementById('login-user').value = document.getElementById('reg-user').value;
+        document.getElementById('login-pass').value = document.getElementById('reg-pass').value;
+        setMode('login');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    // Guest button
+    document.getElementById('guest-btn').addEventListener('click', async () => {
+      try {
+        const data = await request('/guest', {});
+        currentUser = data.username;
+        currentToken = null;
+        startChat();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    function startChat() {
+      document.getElementById('auth').style.display = 'none';
+      document.getElementById('chat').style.display = 'flex';
+      connectWs();
+    }
+
+    function connectWs() {
+      let url = `${WS_URL}/ws/chat?username=${encodeURIComponent(currentUser)}`;
+      if (currentToken) {
+        url += `&token=${encodeURIComponent(currentToken)}`;
+      }
+      ws = new WebSocket(url);
+
+      ws.onmessage = event => {
+        const messages = document.getElementById('messages');
+        const parts = event.data.split('|');
+        
+        if (parts[0] === 'PUBLIC') {
+          const content = parts.slice(1).join('|');
+          if (currentChat === null) {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.textContent = content;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+          }
+        } else if (parts[0] === 'PRIVATE') {
+          const sender = parts[1];
+          const content = parts.slice(2).join('|');
+          if (currentChat === sender) {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.textContent = content;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+          }
+          privateChats.add(sender);
+        }
+      };
+
+      ws.onopen = () => console.log('WebSocket verbunden');
+      ws.onclose = () => console.log('WebSocket getrennt');
+    }
+
+    document.getElementById('send').addEventListener('click', () => {
+      const input = document.getElementById('input');
+      if (input.value.trim() !== '') {
+        if (currentChat === null) {
+          // Public chat
+          ws.send(`PUBLIC|${input.value}`);
+        } else {
+          // Private chat
+          ws.send(`PRIVATE|${currentChat}|${input.value}`);
+        }
+        input.value = '';
+        input.focus();
+      }
+    });
+
+    document.getElementById('input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') {
+        document.getElementById('send').click();
+      }
+    });
+
+    // Online Users modal
+    document.getElementById('online-users-btn').addEventListener('click', async () => {
+      try {
+        const res = await fetch(BACKEND_URL + '/online-users');
+        const data = await res.json();
+        const list = document.getElementById('online-users-list');
+        list.innerHTML = '';
+        data.users.filter(u => u !== currentUser).forEach(username => {
+          const li = document.createElement('li');
+          li.textContent = username;
+          li.addEventListener('click', () => openPrivateChat(username));
+          list.appendChild(li);
+        });
+        document.getElementById('online-users-modal').classList.add('show');
+      } catch (err) {
+        showError('Fehler beim Laden der Online-Benutzer: ' + err.message);
+      }
+    });
+
+    // Private Chats modal
+    document.getElementById('private-chats-btn').addEventListener('click', () => {
+      const list = document.getElementById('private-chats-list');
+      list.innerHTML = '';
+      privateChats.forEach(username => {
+        const li = document.createElement('li');
+        li.textContent = username;
+        li.addEventListener('click', () => openPrivateChat(username));
+        list.appendChild(li);
+      });
+      document.getElementById('private-chats-modal').classList.add('show');
+    });
+
+    // Close modals
+    document.getElementById('close-online-users').addEventListener('click', () => {
+      document.getElementById('online-users-modal').classList.remove('show');
+    });
+
+    document.getElementById('close-private-chats').addEventListener('click', () => {
+      document.getElementById('private-chats-modal').classList.remove('show');
+    });
+
+    // Click outside modal to close
+    document.getElementById('online-users-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'online-users-modal') {
+        document.getElementById('online-users-modal').classList.remove('show');
+      }
+    });
+
+    document.getElementById('private-chats-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'private-chats-modal') {
+        document.getElementById('private-chats-modal').classList.remove('show');
+      }
+    });
+
+    function openPrivateChat(username) {
+      currentChat = username;
+      privateChats.add(username);
+      document.getElementById('messages').innerHTML = '';
+      document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
+      document.getElementById('online-users-modal').classList.remove('show');
+      document.getElementById('private-chats-modal').classList.remove('show');
+      document.getElementById('input').focus();
+    }
+
+    function switchToPublicChat() {
+      currentChat = null;
+      document.getElementById('messages').innerHTML = '';
+      document.getElementById('chat-mode').textContent = 'Öffentlicher Chat';
+      document.getElementById('input').focus();
+    }
+
+    document.getElementById('back-to-public-btn').addEventListener('click', () => {
+      switchToPublicChat();
+      document.getElementById('private-chats-modal').classList.remove('show');
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      currentUser = null;
+      currentToken = null;
+      activeMode = null;
+      currentChat = null;
+      privateChats.clear();
+      if (ws) {
+        ws.close();
+      }
+      document.getElementById('login-user').value = '';
+      document.getElementById('login-pass').value = '';
+      document.getElementById('reg-user').value = '';
+      document.getElementById('reg-pass').value = '';
+      document.getElementById('error').textContent = '';
+      document.getElementById('auth').style.display = 'block';
+      document.getElementById('chat').style.display = 'none';
+      document.getElementById('online-users-modal').classList.remove('show');
+      document.getElementById('private-chats-modal').classList.remove('show');
+    });
+  </script>
+</body>
+</html>
