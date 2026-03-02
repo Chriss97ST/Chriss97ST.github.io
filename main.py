@@ -79,20 +79,20 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 ADJECTIVES = [
-    "Schneller", "Lauter", "Leiser", "Bunter", "Mutiger", "Kluger",
-    "Flinker", "Großer", "Kleiner", "Schlauer", "Frecher", "Zarter",
+    "Rad", "Kühn", "Fein", "Blank", "Flott", "Klug",
+    "Zag", "Wild", "Fest", "Rank", "Droll", "Spitz",
 ]
 NOUNS = [
-    "Fuchs", "Maus", "Tiger", "Adler", "Drache", "Bär",
-    "Wolf", "Falke", "Schmetterling", "Eule", "Panther", "Kolibri",
+    "Fox", "Mus", "Tig", "Aar", "Drach", "Bar",
+    "Wolf", "Falk", "Uhu", "Lux", "Puma", "Koli",
 ]
 
 def random_username():
     # choose two words randomly to form a fancy guest name
     adj = random.choice(ADJECTIVES)
     noun = random.choice(NOUNS)
-    num = random.randint(0, 9999)
-    return f"{adj}{noun}{num:04d}"
+    num = random.randint(0, 999)
+    return f"{adj}{noun}{num:03d}"
 
 
 # --- pydantic schemas --------------------------------------------------------

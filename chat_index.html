@@ -132,6 +132,7 @@
       color: #fff;
       border: none;
       border-radius: 4px;
+      position: relative;
       cursor: pointer;
       font-size: 0.9rem;
       transition: background 0.2s ease;
@@ -210,6 +211,9 @@
       border-radius: 4px;
       cursor: pointer;
       transition: background 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .user-list li:hover {
@@ -227,6 +231,7 @@
       border-radius: 4px;
       padding: 0.5rem;
       overflow-y: auto;
+      max-height: calc(100vh - 260px);
     }
 
     .message {
@@ -275,12 +280,12 @@
 
     /* footer container */
     .footer-buttons {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
+      position: relative;
+      margin-left: 0.5rem;
       display: flex;
       gap: 0.5rem;
       display: none;
+      align-items: center;
     }
 
     .footer-buttons.show {
@@ -288,7 +293,8 @@
     }
 
     .footer-btn {
-      padding: 0.6rem 1rem;
+      padding: 0.3rem 0.5rem;
+      margin-right: 15px;
       background: #387ff5;
       color: #fff;
       border: none;
@@ -298,6 +304,7 @@
       transition: background 0.2s ease;
       font-weight: bold;
       font-size: 0.9rem;
+      white-space: nowrap;
     }
 
     .footer-btn:hover {
@@ -442,6 +449,31 @@
       background: #2e6fd1;
     }
 
+    /* badge for new private messages */
+    .badge {
+      position: absolute;
+      top: -6px;
+      right: -8px;
+      background: #f55;
+      color: #fff;
+      padding: 0 6px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      line-height: 20px;
+      display: none;
+    }
+
+    .chat-count {
+      background: #f55;
+      color: #fff;
+      padding: 0 8px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+      min-width: 28px;
+      text-align: center;
+    }
+
     .password-section {
       display: flex;
       flex-direction: column;
@@ -498,17 +530,21 @@
       overflow-y: auto;
       opacity: 1;
       transition: opacity 0.3s ease;
+      max-height: calc(100vh - 260px);
     }
   </style>
 </head>
 <body>
   <header class="header">
     <h1>Dark Chat</h1>
+    <div class="footer-buttons show">
+      <a href="/index.html" class="footer-btn">🏠 Home</a>
+    </div>
     <div id="user-info" class="user-info" style="display: none;">
       <span id="username-display"></span>
       <div class="user-actions">
         <button class="menu-btn" id="menu-btn">⋯ mehr</button>
-        <button id="logout-btn">🚪</button>
+        <button id="logout-btn">🚪logout</button>
       </div>
       <div id="user-menu" class="user-menu">
         <!-- menu content added dynamically -->
@@ -529,6 +565,9 @@
       <form id="login-form">
         <input id="login-user" type="text" placeholder="Benutzername" required />
         <input id="login-pass" type="password" placeholder="Passwort" required />
+        <label style="font-size:0.85rem; display:flex; align-items:center; gap:0.3rem;">
+          <input type="checkbox" id="remember-me" /> Angemeldet bleiben
+        </label>
         <button type="submit">Anmelden</button>
       </form>
 
@@ -576,10 +615,7 @@
     </div>
   </div>
 
-  <!-- Footer Buttons -->
-  <div class="footer-buttons show">
-    <a href="/index.html" class="footer-btn">🏠 Hauptseite</a>
-  </div>
+  <!-- footer moved into header -->
 
   <script>
     // Backend configuration
@@ -596,6 +632,26 @@
     let activeMode = null;
     let currentChat = null; // null = public, username = private chat
     let privateChats = new Set(); // usernames we have private chats with
+    let unreadCounts = {}; // {username: count}
+
+
+    function updatePrivateChatsBadge() {
+      const btn = document.getElementById('private-chats-btn');
+      if (!btn) return;
+      const total = Object.values(unreadCounts).reduce((a, b) => a + (b || 0), 0);
+      let badge = btn.querySelector('.badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge';
+        btn.appendChild(badge);
+      }
+      if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
 
     function showError(msg) {
       document.getElementById('error').textContent = msg;
@@ -880,6 +936,16 @@
         currentToken = data.access_token;
         currentUserColor = data.color || "#ffffff";
         currentUserIsGuest = false;
+        const remember = document.getElementById('remember-me').checked;
+        if (remember) {
+          localStorage.setItem('chatSession', JSON.stringify({
+            username: currentUser,
+            token: currentToken,
+            color: currentUserColor
+          }));
+        } else {
+          localStorage.removeItem('chatSession');
+        }
         startChat();
         showUserInfo();
       } catch (err) {
@@ -932,6 +998,25 @@
       connectWs();
     }
 
+    // restore saved session if "remember me" was checked
+    (function restoreSession() {
+      const saved = localStorage.getItem('chatSession');
+      if (saved) {
+        try {
+          const obj = JSON.parse(saved);
+          currentUser = obj.username;
+          currentToken = obj.token;
+          currentUserColor = obj.color || "#ffffff";
+          currentUserIsGuest = false;
+          startChat();
+          showUserInfo();
+        } catch (e) {
+          console.warn('Failed to restore session', e);
+          localStorage.removeItem('chatSession');
+        }
+      }
+    })();
+
     function connectWs() {
       let url = `${WS_URL}/ws/chat?username=${encodeURIComponent(currentUser)}`;
       if (currentToken) {
@@ -967,6 +1052,9 @@
             });
           } else {
             // new private message for a chat we're not viewing
+            // increment unread count
+            unreadCounts[sender] = (unreadCounts[sender] || 0) + 1;
+            updatePrivateChatsBadge();
             showToast(`Neue Nachricht von ${sender}`, sender);
           }
           privateChats.add(sender);
@@ -1029,9 +1117,19 @@
     document.getElementById('private-chats-btn').addEventListener('click', () => {
       const list = document.getElementById('private-chats-list');
       list.innerHTML = '';
+      // render private chats with unread counts
       privateChats.forEach(username => {
         const li = document.createElement('li');
-        li.textContent = username;
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = username;
+        li.appendChild(nameSpan);
+        const count = unreadCounts[username] || 0;
+        if (count > 0) {
+          const cb = document.createElement('span');
+          cb.className = 'chat-count';
+          cb.textContent = count;
+          li.appendChild(cb);
+        }
         li.addEventListener('click', () => openPrivateChat(username));
         list.appendChild(li);
       });
@@ -1063,6 +1161,11 @@
     function openPrivateChat(username) {
       currentChat = username;
       privateChats.add(username);
+      // mark messages as read for this chat
+      if (unreadCounts[username]) {
+        unreadCounts[username] = 0;
+        updatePrivateChatsBadge();
+      }
       document.getElementById('messages').innerHTML = '';
       document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
       document.getElementById('online-users-modal').classList.remove('show');
@@ -1092,6 +1195,7 @@
       activeMode = null;
       currentChat = null;
       privateChats.clear();
+      localStorage.removeItem('chatSession');
       if (ws) {
         ws.close();
       }
