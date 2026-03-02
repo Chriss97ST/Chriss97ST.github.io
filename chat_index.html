@@ -304,6 +304,150 @@
       background: #2e6fd1;
     }
 
+    /* header and user-info styling */
+    .header {
+      width: 90%;
+      max-width: 800px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .user-info {
+      background: #1e1e1e;
+      border: 2px solid #387ff5;
+      border-radius: 4px;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.6rem;
+      position: relative;
+    }
+    .user-info span {
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .user-info span:hover {
+      background: rgba(56, 127, 245, 0.2);
+    }
+    .user-actions {
+      display: flex;
+      gap: 0.4rem;
+      width: 100%;
+      justify-content: center;
+    }
+    .menu-btn, #logout-btn {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      background: #387ff5;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .menu-btn:hover, #logout-btn:hover {
+      background: #2e6fd1;
+    }
+    /* user menu dropdown */
+    .user-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #1e1e1e;
+      border: 2px solid #387ff5;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      min-width: 280px;
+      padding: 0.8rem;
+      z-index: 2001;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .user-menu.show {
+      display: flex;
+    }
+    .user-menu h3 {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #eee;
+    }
+    .menu-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .menu-section label {
+      font-size: 0.8rem;
+      color: #aaa;
+      font-weight: bold;
+    }
+    .color-picker-wrapper {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .user-menu input[type="color"] {
+      width: 50px;
+      height: 32px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .update-color-btn {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+      border-radius: 3px;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    .color-value {
+      font-size: 0.8rem;
+      color: #aaa;
+      flex-shrink: 0;
+    }
+    .user-menu input[type="password"],
+    .user-menu input[type="text"] {
+      padding: 0.4rem;
+      border: none;
+      border-radius: 3px;
+      background: #121212;
+      color: #eee;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 0.85rem;
+    }
+    .user-menu button {
+      padding: 0.4rem;
+      background: #387ff5;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background 0.2s ease;
+    }
+    .user-menu button:hover {
+      background: #2e6fd1;
+    }
+
+    .password-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
@@ -314,10 +458,63 @@
       #input { margin-bottom: 0; }
       .mode-buttons { flex-direction: column; }
     }
+
+    /* toast notification */
+    .toast {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 0.8rem 1rem;
+      border: 2px solid #387ff5;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 2000;
+      cursor: pointer;
+      animation: slideDown 0.4s ease;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+
+    @keyframes slideDown {
+      from { transform: translate(-50%, -20px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* fade utility for chat messages */
+    #messages.fading {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #messages {
+      flex: 1;
+      background: #1e1e1e;
+      border-radius: 4px;
+      padding: 0.5rem;
+      overflow-y: auto;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
   </style>
 </head>
 <body>
-  <h1>Dark Chat</h1>
+  <header class="header">
+    <h1>Dark Chat</h1>
+    <div id="user-info" class="user-info" style="display: none;">
+      <span id="username-display"></span>
+      <div class="user-actions">
+        <button class="menu-btn" id="menu-btn">⋯ mehr</button>
+        <button id="logout-btn">🚪</button>
+      </div>
+      <div id="user-menu" class="user-menu">
+        <!-- menu content added dynamically -->
+      </div>
+    </div>
+  </header>
   <div class="container">
     <div id="auth">
       <div id="error"></div>
@@ -382,23 +579,216 @@
   <!-- Footer Buttons -->
   <div class="footer-buttons show">
     <a href="/index.html" class="footer-btn">🏠 Hauptseite</a>
-    <button id="logout-btn" class="footer-btn">🚪 Logout</button>
   </div>
 
   <script>
     // Backend configuration
-    const BACKEND_URL = 'https://chriss97st.ddns.net';
-    const WS_URL = 'wss://chriss97st.ddns.net';
+    // the backend is served under "/chat" on the DDNS host
+    const BACKEND_URL = 'https://chriss97st.ddns.net/chat';
+    const WS_URL = 'wss://chriss97st.ddns.net/chat';
 
     let ws;
     let currentUser;
     let currentToken;
+    let currentUserColor = "#ffffff";
+    let currentUserIsGuest = false;
+    let userColorCache = {};  // cache {username: color} to avoid repeated requests
     let activeMode = null;
     let currentChat = null; // null = public, username = private chat
     let privateChats = new Set(); // usernames we have private chats with
 
     function showError(msg) {
       document.getElementById('error').textContent = msg;
+    }
+
+    async function getUserColor(username) {
+      if (username === currentUser) {
+        return currentUserColor;
+      }
+      if (userColorCache[username]) {
+        return userColorCache[username];
+      }
+      try {
+        const res = await fetch(BACKEND_URL + '/user-color/' + encodeURIComponent(username));
+        const data = await res.json();
+        userColorCache[username] = data.color;
+        return data.color;
+      } catch (e) {
+        return "#ffffff";
+      }
+    }
+
+    async function renderMessageWithColor(username, content, time) {
+      const div = document.createElement('div');
+      div.className = 'message';
+      const color = await getUserColor(username);
+      
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = time + ' ';
+      timeSpan.style.color = '#aaa';
+      
+      const userSpan = document.createElement('span');
+      userSpan.textContent = username + ': ';
+      userSpan.style.color = color;
+      userSpan.style.fontWeight = 'bold';
+      
+      const contentSpan = document.createElement('span');
+      contentSpan.textContent = content;
+      
+      div.appendChild(timeSpan);
+      div.appendChild(userSpan);
+      div.appendChild(contentSpan);
+      return div;
+    }
+
+    
+
+    function showError(msg) {
+      document.getElementById('error').textContent = msg;
+    }
+
+    function showUserInfo() {
+      const info = document.getElementById('user-info');
+      const display = document.getElementById('username-display');
+      display.textContent = currentUser;
+      display.style.color = currentUserColor;
+      info.style.display = 'flex';
+      buildUserMenu();
+    }
+
+    function buildUserMenu() {
+      const menu = document.getElementById('user-menu');
+      menu.innerHTML = '';
+      
+      if (currentUserIsGuest) {
+        // Guest: show password registration option
+        menu.innerHTML = `
+          <div class="menu-section">
+            <h3>Account registrieren</h3>
+            <input type="password" id="guest-pass" placeholder="Neues Passwort" />
+            <button id="register-guest-btn">Account sichern</button>
+          </div>
+        `;
+        document.getElementById('register-guest-btn').addEventListener('click', registerGuest);
+      } else {
+        // Registered: show color picker and expandable password change
+        menu.innerHTML = `
+          <div class="menu-section">
+            <label>Namensfarbe</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="color-picker" value="${currentUserColor}" />
+              <span class="color-value" id="color-value">${currentUserColor}</span>
+              <button id="update-color-btn" class="update-color-btn">Speichern</button>
+            </div>
+          </div>
+          <div class="menu-section">
+            <button id="toggle-password-btn">Passwort ändern</button>
+            <div id="password-section" style="display: none;" class="password-section">
+              <input type="password" id="old-pass" placeholder="Altes Passwort" />
+              <input type="password" id="new-pass" placeholder="Neues Passwort" />
+              <button id="change-pass-btn">Ändern</button>
+            </div>
+          </div>
+        `;
+
+        const colorPicker = document.getElementById('color-picker');
+        const colorValue = document.getElementById('color-value');
+
+        document.getElementById('update-color-btn').addEventListener('click', updateUserColor);
+        colorPicker.addEventListener('change', (e) => {
+          colorValue.textContent = e.target.value;
+        });
+
+        document.getElementById('toggle-password-btn').addEventListener('click', () => {
+          const section = document.getElementById('password-section');
+          section.style.display = section.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        document.getElementById('change-pass-btn').addEventListener('click', changePassword);
+      }
+    }
+
+    async function changePassword() {
+      const oldPass = document.getElementById('old-pass').value;
+      const newPass = document.getElementById('new-pass').value;
+      if (!oldPass || !newPass) {
+        alert('Beide Passwörter erforderlich');
+        return;
+      }
+      try {
+        await fetch(BACKEND_URL + '/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser, old_password: oldPass, new_password: newPass }),
+        });
+        showError('Passwort erfolgreich geändert!');
+        document.getElementById('old-pass').value = '';
+        document.getElementById('new-pass').value = '';
+        setTimeout(() => showError(''), 2000);
+      } catch (e) {
+        showError('Fehler: ' + e.message);
+      }
+    }
+
+    async function registerGuest() {
+      const password = document.getElementById('guest-pass').value;
+      if (!password) {
+        alert('Passwort erforderlich');
+        return;
+      }
+      try {
+        await fetch(BACKEND_URL + '/register-guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser, password: password }),
+        });
+        currentUserIsGuest = false;
+        buildUserMenu();
+        showError('Account erfolgreich registriert!');
+        setTimeout(() => showError(''), 2000);
+      } catch (e) {
+        showError('Fehler: ' + e.message);
+      }
+    }
+
+    async function updateUserColor() {
+      const color = document.getElementById('color-picker').value;
+      try {
+        await fetch(BACKEND_URL + '/update-color', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser, color: color }),
+        });
+        currentUserColor = color;
+        document.getElementById('username-display').style.color = currentUserColor;
+        // color saved; update displayed username color
+        showError('Farbe gespeichert!');
+        setTimeout(() => showError(''), 2000);
+      } catch (e) {
+        showError('Fehler: ' + e.message);
+      }
+    }
+
+    function showToast(message, user) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      if (user) {
+        toast.dataset.user = user;
+        toast.addEventListener('click', () => {
+          openPrivateChat(user);
+          toast.remove();
+        });
+      }
+      document.body.appendChild(toast);
+      // trigger show after insertion
+      setTimeout(() => toast.classList.add('show'), 10);
+      // remove after a few seconds unless clicked
+      const hide = () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      };
+      setTimeout(hide, 4000);
     }
 
     function setMode(mode) {
@@ -434,6 +824,46 @@
       return res.json();
     }
 
+    async function loadHistory(peer) {
+      const messages = document.getElementById('messages');
+      // fade out, then load
+      messages.classList.add('fading');
+      try {
+        let url = BACKEND_URL + '/history?username=' + encodeURIComponent(currentUser);
+        if (peer) url += '&peer=' + encodeURIComponent(peer);
+        const res = await fetch(url);
+        const data = await res.json();
+        messages.innerHTML = '';
+        for (const m of data) {
+          const time = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: false});
+          const messageDiv = await renderMessageWithColor(m.username, m.content, time);
+          messages.appendChild(messageDiv);
+        }
+        messages.scrollTop = messages.scrollHeight;
+      } catch (e) {
+        console.error('history error', e);
+      }
+      // fade back in
+      setTimeout(() => messages.classList.remove('fading'), 50);
+    }
+
+    // Toggle user menu on more button click
+    document.getElementById('menu-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById('user-menu');
+      menu.classList.toggle('show');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+      document.getElementById('user-menu').classList.remove('show');
+    });
+
+    // Close menu when clicking inside it (prevent bubbling)
+    document.getElementById('user-menu').addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     // Mode buttons
     document.getElementById('login-mode-btn').addEventListener('click', () => setMode('login'));
     document.getElementById('register-mode-btn').addEventListener('click', () => setMode('register'));
@@ -448,7 +878,10 @@
         });
         currentUser = data.username;
         currentToken = data.access_token;
+        currentUserColor = data.color || "#ffffff";
+        currentUserIsGuest = false;
         startChat();
+        showUserInfo();
       } catch (err) {
         showError(err.message);
       }
@@ -462,7 +895,13 @@
           username: document.getElementById('reg-user').value,
           password: document.getElementById('reg-pass').value,
         });
-        showError('Registrierung erfolgreich! Bestelog dich jetzt ...');
+        // show success text in green
+        const errElem = document.getElementById('error');
+        errElem.style.color = '#5f5';
+        errElem.textContent = 'Registrierung erfolgreich! Jetzt anmelden ...';
+        // reset to normal color after a short time
+        setTimeout(() => { errElem.style.color = '#f55'; }, 4000);
+
         // pre-fill login form and switch to login mode
         document.getElementById('login-user').value = document.getElementById('reg-user').value;
         document.getElementById('login-pass').value = document.getElementById('reg-pass').value;
@@ -478,7 +917,10 @@
         const data = await request('/guest', {});
         currentUser = data.username;
         currentToken = null;
+        currentUserColor = data.color || "#ffffff";
+        currentUserIsGuest = true;
         startChat();
+        showUserInfo();
       } catch (err) {
         showError(err.message);
       }
@@ -502,29 +944,44 @@
         const parts = event.data.split('|');
         
         if (parts[0] === 'PUBLIC') {
-          const content = parts.slice(1).join('|');
-          if (currentChat === null) {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.textContent = content;
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
+          const fullMsg = parts.slice(1).join('|');
+          // parse "time username: content"
+          const match = fullMsg.match(/^(\d{2}:\d{2}) ([^:]+): (.*)$/);
+          if (match && currentChat === null) {
+            const [, time, username, content] = match;
+            renderMessageWithColor(username, content, time).then(div => {
+              messages.appendChild(div);
+              messages.scrollTop = messages.scrollHeight;
+            });
           }
         } else if (parts[0] === 'PRIVATE') {
           const sender = parts[1];
-          const content = parts.slice(2).join('|');
-          if (currentChat === sender) {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.textContent = content;
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
+          const fullMsg = parts.slice(2).join('|');
+          // parse "time username: content"
+          const match = fullMsg.match(/^(\d{2}:\d{2}) ([^:]+): (.*)$/);
+          if (match && currentChat === sender) {
+            const [, time, username, content] = match;
+            renderMessageWithColor(username, content, time).then(div => {
+              messages.appendChild(div);
+              messages.scrollTop = messages.scrollHeight;
+            });
+          } else {
+            // new private message for a chat we're not viewing
+            showToast(`Neue Nachricht von ${sender}`, sender);
           }
           privateChats.add(sender);
         }
       };
 
-      ws.onopen = () => console.log('WebSocket verbunden');
+      ws.onopen = () => {
+        console.log('WebSocket verbunden');
+        // populate current view with history
+        if (currentChat === null) {
+          loadHistory(null);
+        } else {
+          loadHistory(currentChat);
+        }
+      };
       ws.onclose = () => console.log('WebSocket getrennt');
     }
 
@@ -611,6 +1068,7 @@
       document.getElementById('online-users-modal').classList.remove('show');
       document.getElementById('private-chats-modal').classList.remove('show');
       document.getElementById('input').focus();
+      loadHistory(username);
     }
 
     function switchToPublicChat() {
@@ -618,6 +1076,7 @@
       document.getElementById('messages').innerHTML = '';
       document.getElementById('chat-mode').textContent = 'Öffentlicher Chat';
       document.getElementById('input').focus();
+      loadHistory(null);
     }
 
     document.getElementById('back-to-public-btn').addEventListener('click', () => {
@@ -628,6 +1087,8 @@
     document.getElementById('logout-btn').addEventListener('click', () => {
       currentUser = null;
       currentToken = null;
+      currentUserColor = "#ffffff";
+      currentUserIsGuest = false;
       activeMode = null;
       currentChat = null;
       privateChats.clear();
@@ -643,7 +1104,8 @@
       document.getElementById('chat').style.display = 'none';
       document.getElementById('online-users-modal').classList.remove('show');
       document.getElementById('private-chats-modal').classList.remove('show');
-    });
-  </script>
+      document.getElementById('user-info').style.display = 'none';
+      document.getElementById('user-menu').classList.remove('show');
+    });  </script>
 </body>
 </html>

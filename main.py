@@ -26,6 +26,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)
     is_anonymous = Column(Boolean, default=False)
+    color = Column(String, default="#ffffff")  # hex color for username display
 
 
 class Message(Base):
@@ -77,8 +78,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
+ADJECTIVES = [
+    "Schneller", "Lauter", "Leiser", "Bunter", "Mutiger", "Kluger",
+    "Flinker", "Großer", "Kleiner", "Schlauer", "Frecher", "Zarter",
+]
+NOUNS = [
+    "Fuchs", "Maus", "Tiger", "Adler", "Drache", "Bär",
+    "Wolf", "Falke", "Schmetterling", "Eule", "Panther", "Kolibri",
+]
+
 def random_username():
-    return "Guest" + "".join(random.choices(string.digits, k=4))
+    # choose two words randomly to form a fancy guest name
+    adj = random.choice(ADJECTIVES)
+    noun = random.choice(NOUNS)
+    num = random.randint(0, 9999)
+    return f"{adj}{noun}{num:04d}"
 
 
 # --- pydantic schemas --------------------------------------------------------
@@ -101,6 +115,16 @@ class MessageIn(BaseModel):
     content: str
 
 
+class ConvertGuestSchema(BaseModel):
+    username: str
+    password: str
+
+
+class UpdateColorSchema(BaseModel):
+    username: str
+    color: str
+
+
 # --- application -------------------------------------------------------------
 
 app = FastAPI()
@@ -118,24 +142,27 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="."), name="static")
 
 @app.get("/chat")
+@app.get("/")
 async def get_chat():
     with open("chat_index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 
 @app.post("/register")
+@app.post("/chat/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == user.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
     hashed = get_password_hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed, is_anonymous=False)
+    db_user = User(username=user.username, hashed_password=hashed, is_anonymous=False, color="#ffffff")
     db.add(db_user)
     db.commit()
-    return {"username": user.username}
+    return {"username": user.username, "color": "#ffffff"}
 
 
 @app.post("/login")
+@app.post("/chat/login")
 def login(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not db_user.hashed_password:
@@ -146,10 +173,11 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
         data={"sub": db_user.username},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    return {"access_token": access_token, "token_type": "bearer", "username": db_user.username}
+    return {"access_token": access_token, "token_type": "bearer", "username": db_user.username, "color": db_user.color}
 
 
 @app.get("/online-users")
+@app.get("/chat/online-users")
 def get_online_users():
     """Returns list of currently online users."""
     users = manager.get_online_users()
@@ -190,10 +218,152 @@ class ConnectionManager:
 
 
 
+@app.post("/guest")
+@app.post("/chat/guest")
+def guest(db: Session = Depends(get_db)):
+    uname = random_username()
+    # ensure uniqueness (if collision, try again)
+    while db.query(User).filter(User.username == uname).first():
+        uname = random_username()
+    db_user = User(username=uname, hashed_password=None, is_anonymous=True, color="#ffffff")
+    db.add(db_user)
+    db.commit()
+    return {"username": uname, "color": "#ffffff"}
+
+
 manager = ConnectionManager()
 
 
+@app.post("/register-guest")
+@app.post("/chat/register-guest")
+def register_guest(data: ConvertGuestSchema, db: Session = Depends(get_db)):
+    """Convert an anonymous guest account to a registered account with password."""
+    username = data.username
+    new_password = data.password
+    
+    if not username or not new_password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+    
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    if not db_user.is_anonymous:
+        raise HTTPException(status_code=400, detail="User is already registered")
+    
+    # check if new username already exists
+    if username != db_user.username:
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+    
+    hashed = get_password_hash(new_password)
+    db_user.hashed_password = hashed
+    db_user.is_anonymous = False
+    db.commit()
+    
+    return {"username": db_user.username, "color": db_user.color}
+
+
+@app.post("/update-color")
+@app.post("/chat/update-color")
+def update_color(data: UpdateColorSchema, db: Session = Depends(get_db)):
+    """Update user's display color (registered users only)."""
+    username = data.username
+    color = data.color
+    
+    if not username or not color:
+        raise HTTPException(status_code=400, detail="Username and color required")
+    
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    if db_user.is_anonymous:
+        raise HTTPException(status_code=400, detail="Guest accounts cannot set a color")
+    
+    db_user.color = color
+    db.commit()
+    
+    return {"username": db_user.username, "color": db_user.color}
+
+
+
+@app.post("/change-password")
+@app.post("/chat/change-password")
+def change_password(data: dict, db: Session = Depends(get_db)):
+    """Change password for a registered user."""
+    username = data.get("username")
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+    
+    if not username or not old_password or not new_password:
+        raise HTTPException(status_code=400, detail="Username and both passwords required")
+    
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    if not db_user.hashed_password or not verify_password(old_password, db_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+    
+    hashed = get_password_hash(new_password)
+    db_user.hashed_password = hashed
+    db.commit()
+    
+    return {"username": db_user.username}
+
+
+@app.get("/user-color/{username}")
+@app.get("/chat/user-color/{username}")
+def get_user_color(username: str, db: Session = Depends(get_db)):
+    """Get the display color for a user."""
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
+        return {"color": "#ffffff"}  # default white if user not found
+    return {"color": db_user.color}
+
+
+
+@app.get("/history")
+@app.get("/chat/history")
+def history(username: str, peer: Optional[str] = None, db: Session = Depends(get_db)):
+    """Return message history.
+
+    * public chat when `peer` is omitted
+    * private conversation between ``username`` and ``peer`` when `peer` is provided
+    """
+    if peer:
+        msgs = (
+            db.query(Message)
+            .filter(
+                ((Message.username == username) & (Message.target_user == peer))
+                | ((Message.username == peer) & (Message.target_user == username))
+            )
+            .order_by(Message.id)
+            .all()
+        )
+    else:
+        msgs = (
+            db.query(Message)
+            .filter(Message.target_user == None)
+            .order_by(Message.id)
+            .all()
+        )
+
+    return [
+        {
+            "username": m.username,
+            "content": m.content,
+            "timestamp": m.timestamp.isoformat(),
+            "target_user": m.target_user,
+        }
+        for m in msgs
+    ]
+
+
 @app.websocket("/ws/chat")
+@app.websocket("/chat/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
     # read username/token from query params
     username = websocket.query_params.get("username")
@@ -211,18 +381,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await manager.connect(websocket, username)
 
-    # send recent public history to the new client
-    with SessionLocal() as db:
-        recent = (
-            db.query(Message)
-            .filter(Message.target_user == None)
-            .order_by(Message.id.desc())
-            .limit(50)
-            .all()
-        )
-        for msg in reversed(recent):
-            ts = msg.timestamp.strftime("%H:%M")
-            await websocket.send_text(f"PUBLIC|{ts} {msg.username}: {msg.content}")
+    # history is now loaded by the client via HTTP; the websocket only delivers new messages
 
     try:
         while True:
