@@ -5,22 +5,62 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dark Chat</title>
   <style>
-    /* dark theme base */
+  /* --- Lade-Animation Overlay --- */
+    #loader {
+        position: fixed;
+        inset: 0;
+        background: #0d0d0d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        animation: fadeOut 0.8s ease 1.2s forwards;
+    }
+
+    .spinner {
+        width: 42px;
+        height: 42px;
+        border: 4px solid #333;
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeOut {
+        to { opacity: 0; visibility: hidden; }
+    }
+
+    /* --- Fade-In des Inhalts --- */
+    body.fade-in {
+        opacity: 0;
+        transition: opacity 1s ease 0.3s;
+    }
+
+    body.loaded {
+        opacity: 1;
+    }
+
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #121212;
-      color: #eee;
+      padding: 0;
+      background: #0d0d0d;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      position: relative;
-      padding-bottom: 5rem;
     }
 
     h1 {
-      margin: 1rem 0;
+      margin-top: 80px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 1.2px;
+      text-shadow: 0 0 10px rgba(255,255,255,0.15);
     }
 
     .container {
@@ -303,7 +343,7 @@
       text-decoration: none;
       transition: background 0.2s ease;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.75rem;
       white-space: nowrap;
     }
 
@@ -535,6 +575,9 @@
   </style>
 </head>
 <body>
+  <div id="loader">
+    <div class="spinner"></div>
+  </div>
   <header class="header">
     <h1>Dark Chat</h1>
     <div class="footer-buttons show">
@@ -586,6 +629,7 @@
       <div class="top-buttons">
         <button class="top-btn" id="online-users-btn">👥 Online</button>
         <button class="top-btn" id="private-chats-btn">💬 Chats</button>
+        <button class="top-btn" id="registered-users-btn">👤 Benutzer</button>
         <div class="chat-mode-indicator" id="chat-mode">Öffentlicher Chat</div>
       </div>
       <div id="messages"></div>
@@ -612,6 +656,15 @@
       <h2>Private Chats</h2>
       <ul id="private-chats-list" class="user-list"></ul>
       <button id="back-to-public-btn" style="width: 100%; margin-top: 1rem;">← Zurück zum öffentlichen Chat</button>
+    </div>
+  </div>
+
+  <!-- Registered Users Modal -->
+  <div id="registered-users-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="close-registered-users">&times;</span>
+      <h2>Registrierte Benutzer</h2>
+      <ul id="registered-users-list" class="user-list"></ul>
     </div>
   </div>
 
@@ -701,6 +754,28 @@
 
     function showError(msg) {
       document.getElementById('error').textContent = msg;
+    }
+
+    async function loadPeers() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch(BACKEND_URL + '/peers?username=' + encodeURIComponent(currentUser));
+        const data = await res.json();
+        data.peers.forEach(u => privateChats.add(u));
+        // persist updated privateChats
+        const saved = localStorage.getItem('chatSession');
+        if (saved) {
+          try {
+            const obj = JSON.parse(saved);
+            obj.privateChats = Array.from(privateChats);
+            localStorage.setItem('chatSession', JSON.stringify(obj));
+          } catch (e) {
+            console.warn('Failed to save private chats', e);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load peers', e);
+      }
     }
 
     function showUserInfo() {
@@ -817,7 +892,13 @@
         });
         currentUserColor = color;
         document.getElementById('username-display').style.color = currentUserColor;
-        // color saved; update displayed username color
+        // Update localStorage if session is saved
+        const saved = localStorage.getItem('chatSession');
+        if (saved) {
+          const obj = JSON.parse(saved);
+          obj.color = color;
+          localStorage.setItem('chatSession', JSON.stringify(obj));
+        }
         showError('Farbe gespeichert!');
         setTimeout(() => showError(''), 2000);
       } catch (e) {
@@ -941,7 +1022,9 @@
           localStorage.setItem('chatSession', JSON.stringify({
             username: currentUser,
             token: currentToken,
-            color: currentUserColor
+            color: currentUserColor,
+            privateChats: Array.from(privateChats),
+            unreadCounts: unreadCounts
           }));
         } else {
           localStorage.removeItem('chatSession');
@@ -992,9 +1075,10 @@
       }
     });
 
-    function startChat() {
+    async function startChat() {
       document.getElementById('auth').style.display = 'none';
       document.getElementById('chat').style.display = 'flex';
+      await loadPeers();
       connectWs();
     }
 
@@ -1008,8 +1092,24 @@
           currentToken = obj.token;
           currentUserColor = obj.color || "#ffffff";
           currentUserIsGuest = false;
+          // restore private chats from localStorage
+          if (obj.privateChats && Array.isArray(obj.privateChats)) {
+            privateChats = new Set(obj.privateChats);
+          }
+          if (obj.unreadCounts && typeof obj.unreadCounts === 'object') {
+            unreadCounts = obj.unreadCounts;
+            updatePrivateChatsBadge();
+          }
           startChat();
           showUserInfo();
+          // fetch current color from backend to ensure it's up-to-date
+          fetch(BACKEND_URL + '/user-color/' + encodeURIComponent(currentUser))
+            .then(res => res.json())
+            .then(data => {
+              currentUserColor = data.color;
+              document.getElementById('username-display').style.color = currentUserColor;
+            })
+            .catch(e => console.warn('Failed to fetch current color', e));
         } catch (e) {
           console.warn('Failed to restore session', e);
           localStorage.removeItem('chatSession');
@@ -1055,6 +1155,19 @@
             // increment unread count
             unreadCounts[sender] = (unreadCounts[sender] || 0) + 1;
             updatePrivateChatsBadge();
+            // persist unreadCounts
+            {
+              const saved = localStorage.getItem('chatSession');
+              if (saved) {
+                try {
+                  const obj = JSON.parse(saved);
+                  obj.unreadCounts = unreadCounts;
+                  localStorage.setItem('chatSession', JSON.stringify(obj));
+                } catch (e) {
+                  console.warn('Failed to save unreadCounts', e);
+                }
+              }
+            }
             showToast(`Neue Nachricht von ${sender}`, sender);
           }
           privateChats.add(sender);
@@ -1136,6 +1249,25 @@
       document.getElementById('private-chats-modal').classList.add('show');
     });
 
+    // Registered Users modal
+    document.getElementById('registered-users-btn').addEventListener('click', async () => {
+      try {
+        const res = await fetch(BACKEND_URL + '/registered-users');
+        const data = await res.json();
+        const list = document.getElementById('registered-users-list');
+        list.innerHTML = '';
+        data.users.filter(u => u !== currentUser).forEach(username => {
+          const li = document.createElement('li');
+          li.textContent = username;
+          li.addEventListener('click', () => openPrivateChat(username));
+          list.appendChild(li);
+        });
+        document.getElementById('registered-users-modal').classList.add('show');
+      } catch (err) {
+        showError('Fehler beim Laden der registrierten Benutzer: ' + err.message);
+      }
+    });
+
     // Close modals
     document.getElementById('close-online-users').addEventListener('click', () => {
       document.getElementById('online-users-modal').classList.remove('show');
@@ -1143,6 +1275,10 @@
 
     document.getElementById('close-private-chats').addEventListener('click', () => {
       document.getElementById('private-chats-modal').classList.remove('show');
+    });
+
+    document.getElementById('close-registered-users').addEventListener('click', () => {
+      document.getElementById('registered-users-modal').classList.remove('show');
     });
 
     // Click outside modal to close
@@ -1158,18 +1294,47 @@
       }
     });
 
+    document.getElementById('registered-users-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'registered-users-modal') {
+        document.getElementById('registered-users-modal').classList.remove('show');
+      }
+    });
+
     function openPrivateChat(username) {
       currentChat = username;
       privateChats.add(username);
+      // save updated private chats to localStorage
+      const saved = localStorage.getItem('chatSession');
+      if (saved) {
+        try {
+          const obj = JSON.parse(saved);
+          obj.privateChats = Array.from(privateChats);
+          localStorage.setItem('chatSession', JSON.stringify(obj));
+        } catch (e) {
+          console.warn('Failed to save private chats', e);
+        }
+      }
       // mark messages as read for this chat
       if (unreadCounts[username]) {
         unreadCounts[username] = 0;
         updatePrivateChatsBadge();
+        // persist cleared count
+        const saved = localStorage.getItem('chatSession');
+        if (saved) {
+          try {
+            const obj = JSON.parse(saved);
+            obj.unreadCounts = unreadCounts;
+            localStorage.setItem('chatSession', JSON.stringify(obj));
+          } catch (e) {
+            console.warn('Failed to save unreadCounts', e);
+          }
+        }
       }
       document.getElementById('messages').innerHTML = '';
       document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
       document.getElementById('online-users-modal').classList.remove('show');
       document.getElementById('private-chats-modal').classList.remove('show');
+      document.getElementById('registered-users-modal').classList.remove('show');
       document.getElementById('input').focus();
       loadHistory(username);
     }

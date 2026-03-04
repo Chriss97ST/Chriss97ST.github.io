@@ -184,12 +184,27 @@ def get_online_users():
     return {"users": users}
 
 
+@app.get("/registered-users")
+@app.get("/chat/registered-users")
+def get_registered_users(db: Session = Depends(get_db)):
+    """Returns list of all registered users (non-anonymous)."""
+    users = db.query(User).filter(User.is_anonymous == False).with_entities(User.username).all()
+    usernames = [u.username for u in users]
+    return {"users": usernames}
+
+
 # reused connection manager
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict = {}  # {username: websocket}
 
     async def connect(self, websocket: WebSocket, username: str):
+        # if user already has a connection, close it before replacing
+        if username in self.active_connections:
+            try:
+                await self.active_connections[username].close()
+            except Exception:
+                pass
         await websocket.accept()
         self.active_connections[username] = websocket
 
@@ -351,7 +366,7 @@ def history(username: str, peer: Optional[str] = None, db: Session = Depends(get
             .all()
         )
 
-    return [
+    result = [
         {
             "username": m.username,
             "content": m.content,
@@ -360,6 +375,29 @@ def history(username: str, peer: Optional[str] = None, db: Session = Depends(get
         }
         for m in msgs
     ]
+    return result
+
+
+@app.get("/peers")
+@app.get("/chat/peers")
+def get_peers(username: str, db: Session = Depends(get_db)):
+    """Return list of users that the given username has exchanged private messages with."""
+    sent = (
+        db.query(Message)
+        .filter(Message.username == username, Message.target_user != None)
+        .with_entities(Message.target_user)
+        .distinct()
+        .all()
+    )
+    received = (
+        db.query(Message)
+        .filter(Message.target_user == username)
+        .with_entities(Message.username)
+        .distinct()
+        .all()
+    )
+    names = set([r.target_user for r in sent] + [r.username for r in received])
+    return {"peers": list(names)}
 
 
 @app.websocket("/ws/chat")
