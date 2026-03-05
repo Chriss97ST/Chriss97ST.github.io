@@ -897,7 +897,7 @@
       <span class="close" id="close-private-chats">&times;</span>
       <h2>Private Chats</h2>
       <ul id="private-chats-list" class="user-list"></ul>
-      <button id="back-to-public-btn" style="width: 100%; margin-top: 1rem;">← Zurück zum öffentlichen Chat</button>
+      <button id="back-to-public-btn" style="width: 100%; margin-top: 1rem;">&#128072; Zurück zum öffentlichen Chat</button>
     </div>
   </div>
 
@@ -1428,7 +1428,7 @@
                 }
               }
             }
-            showToast(`Neue Nachricht von ${sender}`, sender);
+            showToast(`Nachricht v.: ${sender}`, sender);
           }
           privateChats.add(sender);
         }
@@ -1539,7 +1539,7 @@
     });
 
     // Click outside modal to close
-    document.getElementById('private-chats-modal').addEventListener('click', (e) => {
+     document.getElementById('private-chats-modal').addEventListener('click', (e) => {
       if (e.target.id === 'private-chats-modal') {
         document.getElementById('private-chats-modal').classList.remove('show');
       }
@@ -1580,7 +1580,7 @@
             console.warn('Failed to save unreadCounts', e);
           }
         }
-      }
+        }
       document.getElementById('messages').innerHTML = '';
       document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
       document.getElementById('private-chats-modal').classList.remove('show');
@@ -1618,7 +1618,7 @@
       document.getElementById('login-pass').value = '';
       document.getElementById('reg-user').value = '';
       document.getElementById('reg-pass').value = '';
-      document.getElementById('error').textContent = '';
+       document.getElementById('error').textContent = '';
       document.getElementById('auth').style.display = 'block';
       document.getElementById('chat').style.display = 'none';
       document.getElementById('private-chats-modal').classList.remove('show');
@@ -1627,6 +1627,3 @@
     });  </script>
 </body>
 </html>
-
-
-
