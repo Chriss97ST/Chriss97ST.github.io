@@ -301,6 +301,28 @@
       background: #2a2a2a;
     }
 
+    .user-entry {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .user-status-dot {
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .user-status-dot.online {
+      background: #34c759;
+    }
+
+    .user-status-dot.offline {
+      background: #ff3b30;
+    }
+
     @keyframes slideIn {
       from { transform: translateY(-20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
@@ -857,7 +879,6 @@
 
     <div id="chat">
       <div class="top-buttons">
-        <button class="top-btn" id="online-users-btn">👥 Online</button>
         <button class="top-btn" id="private-chats-btn">💬 Chats</button>
         <button class="top-btn" id="registered-users-btn">👤 Benutzer</button>
         <div class="chat-mode-indicator" id="chat-mode">Öffentlicher Chat</div>
@@ -867,15 +888,6 @@
         <input id="input" type="text" placeholder="Nachricht eingeben" autocomplete="off" />
         <button id="send">Senden</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Online Users Modal -->
-  <div id="online-users-modal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="close-online-users">&times;</span>
-      <h2>Online Benutzer</h2>
-      <ul id="online-users-list" class="user-list"></ul>
     </div>
   </div>
 
@@ -1455,25 +1467,6 @@
       }
     });
 
-    // Online Users modal
-    document.getElementById('online-users-btn').addEventListener('click', async () => {
-      try {
-        const res = await fetch(BACKEND_URL + '/online-users');
-        const data = await res.json();
-        const list = document.getElementById('online-users-list');
-        list.innerHTML = '';
-        data.users.filter(u => u !== currentUser).forEach(username => {
-          const li = document.createElement('li');
-          li.textContent = username;
-          li.addEventListener('click', () => openPrivateChat(username));
-          list.appendChild(li);
-        });
-        document.getElementById('online-users-modal').classList.add('show');
-      } catch (err) {
-        showError('Fehler beim Laden der Online-Benutzer: ' + err.message);
-      }
-    });
-
     // Private Chats modal
     document.getElementById('private-chats-btn').addEventListener('click', () => {
       const list = document.getElementById('private-chats-list');
@@ -1500,13 +1493,33 @@
     // Registered Users modal
     document.getElementById('registered-users-btn').addEventListener('click', async () => {
       try {
-        const res = await fetch(BACKEND_URL + '/registered-users');
-        const data = await res.json();
+        const [registeredRes, onlineRes] = await Promise.all([
+          fetch(BACKEND_URL + '/registered-users'),
+          fetch(BACKEND_URL + '/online-users'),
+        ]);
+        const [registeredData, onlineData] = await Promise.all([
+          registeredRes.json(),
+          onlineRes.json(),
+        ]);
+        const onlineUsers = new Set((onlineData.users || []).filter(u => u !== currentUser));
         const list = document.getElementById('registered-users-list');
         list.innerHTML = '';
-        data.users.filter(u => u !== currentUser).forEach(username => {
+        (registeredData.users || []).filter(u => u !== currentUser).forEach(username => {
           const li = document.createElement('li');
-          li.textContent = username;
+          const userEntry = document.createElement('span');
+          userEntry.className = 'user-entry';
+
+          const statusDot = document.createElement('span');
+          const isOnline = onlineUsers.has(username);
+          statusDot.className = `user-status-dot ${isOnline ? 'online' : 'offline'}`;
+          statusDot.title = isOnline ? 'Online' : 'Offline';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = username;
+
+          userEntry.appendChild(statusDot);
+          userEntry.appendChild(nameSpan);
+          li.appendChild(userEntry);
           li.addEventListener('click', () => openPrivateChat(username));
           list.appendChild(li);
         });
@@ -1517,10 +1530,6 @@
     });
 
     // Close modals
-    document.getElementById('close-online-users').addEventListener('click', () => {
-      document.getElementById('online-users-modal').classList.remove('show');
-    });
-
     document.getElementById('close-private-chats').addEventListener('click', () => {
       document.getElementById('private-chats-modal').classList.remove('show');
     });
@@ -1530,12 +1539,6 @@
     });
 
     // Click outside modal to close
-    document.getElementById('online-users-modal').addEventListener('click', (e) => {
-      if (e.target.id === 'online-users-modal') {
-        document.getElementById('online-users-modal').classList.remove('show');
-      }
-    });
-
     document.getElementById('private-chats-modal').addEventListener('click', (e) => {
       if (e.target.id === 'private-chats-modal') {
         document.getElementById('private-chats-modal').classList.remove('show');
@@ -1580,7 +1583,6 @@
       }
       document.getElementById('messages').innerHTML = '';
       document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
-      document.getElementById('online-users-modal').classList.remove('show');
       document.getElementById('private-chats-modal').classList.remove('show');
       document.getElementById('registered-users-modal').classList.remove('show');
       document.getElementById('input').focus();
@@ -1619,10 +1621,12 @@
       document.getElementById('error').textContent = '';
       document.getElementById('auth').style.display = 'block';
       document.getElementById('chat').style.display = 'none';
-      document.getElementById('online-users-modal').classList.remove('show');
       document.getElementById('private-chats-modal').classList.remove('show');
       document.getElementById('user-info').style.display = 'none';
       document.getElementById('user-menu').classList.remove('show');
     });  </script>
 </body>
 </html>
+
+
+
