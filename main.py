@@ -51,7 +51,7 @@ def get_db():
 
 # --- authentication helpers ---------------------------------------------------
 
-SECRET_KEY = "lacsapalex69_super_secret88"
+SECRET_KEY = "a_very_secret_key_should_be_changed"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 
