@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dark Chat</title>
   <style>
+    :root {
+      --keyboard-inset: 0px;
+    }
   /* --- Lade-Animation Overlay --- */
     #loader {
         position: fixed;
@@ -53,11 +56,13 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
+      min-height: 100dvh;
+      height: 100dvh;
+      overflow: hidden;
     }
 
     h1 {
-      margin-top: 80px;
+      margin-top: 0;
       font-size: clamp(2rem, 4vw, 3rem);
       letter-spacing: 1.2px;
       text-shadow: 0 0 10px rgba(255,255,255,0.15);
@@ -69,47 +74,51 @@
       flex: 1;
       display: flex;
       flex-direction: column;
+      min-height: 0;
     }
 
     /* auth panel */
     #auth {
-      margin-top: 2rem;
+      margin-top: 1rem;
       animation: fadeIn 0.5s;
     }
 
     /* mode buttons side by side */
     .mode-buttons {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 1rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
     }
 
     .mode-btn {
-      flex: 1;
-      padding: 0.8rem;
+      padding: 0.85rem;
       border: 2px solid #387ff5;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       color: #387ff5;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-weight: bold;
+      font-weight: 600;
+      font-size: 1rem;
     }
 
     .mode-btn:hover {
-      background: #387ff5;
-      color: #fff;
+      background: rgba(56, 127, 245, 0.1);
+      border-color: #2e6fd1;
     }
 
     .mode-btn.active {
       background: #387ff5;
       color: #fff;
+      box-shadow: 0 4px 12px rgba(56, 127, 245, 0.3);
     }
 
     form {
       display: none;
       flex-direction: column;
       margin-bottom: 1rem;
+      gap: 0.75rem;
     }
 
     form.active {
@@ -119,31 +128,47 @@
 
     input[type="text"],
     input[type="password"] {
-      padding: 0.5rem;
-      margin: 0.5rem 0;
-      border: none;
-      border-radius: 4px;
+      padding: 0.65rem 0.8rem;
+      border: 2px solid #333;
+      border-radius: 6px;
       background: #1e1e1e;
       color: #eee;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: #387ff5;
     }
 
     button {
-      padding: 0.6rem;
+      padding: 0.7rem;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: #387ff5;
       color: #fff;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: all 0.2s ease;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(56, 127, 245, 0.2);
     }
 
     button:hover {
       background: #2e6fd1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(56, 127, 245, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
     }
 
     /* guest join button */
     #guest-btn {
-      margin-top: 1rem;
+      margin-top: 0.5rem;
+      width:100%;
     }
 
     #error {
@@ -156,39 +181,51 @@
       display: none;
       flex: 1;
       flex-direction: column;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
+      min-height: 0;
     }
 
     /* Top buttons */
     .top-buttons {
-      display: flex;
-      gap: 0.5rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
       margin-bottom: 1rem;
     }
 
     .top-btn {
-      padding: 0.5rem 1rem;
+      padding: 0.65rem 1rem;
       background: #387ff5;
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       position: relative;
       cursor: pointer;
       font-size: 0.9rem;
-      transition: background 0.2s ease;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(56, 127, 245, 0.2);
     }
 
     .top-btn:hover {
       background: #2e6fd1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(56, 127, 245, 0.3);
+    }
+
+    .top-btn:active {
+      transform: translateY(0);
     }
 
     .chat-mode-indicator {
-      padding: 0.5rem 1rem;
+      padding: 0.65rem 1rem;
       background: #1e1e1e;
-      border-radius: 4px;
+      border: 2px solid #387ff5;
+      border-radius: 6px;
       font-size: 0.9rem;
-      flex: 1;
+      font-weight: 500;
       text-align: center;
+      grid-column: 1 / -1;
     }
 
     /* Modal styles */
@@ -212,17 +249,20 @@
     .modal-content {
       background: #1e1e1e;
       border-radius: 8px;
-      padding: 1.5rem;
+      padding: 2rem;
       max-width: 400px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
       position: relative;
       animation: slideIn 0.3s ease;
+      border: 2px solid #387ff5;
     }
 
     .modal-content h2 {
       margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
     }
 
     .close {
@@ -232,6 +272,7 @@
       font-size: 2rem;
       cursor: pointer;
       color: #f55;
+      transition: color 0.2s ease;
     }
 
     .close:hover {
@@ -268,30 +309,65 @@
     #messages {
       flex: 1;
       background: #1e1e1e;
-      border-radius: 4px;
-      padding: 0.5rem;
+      border-radius: 6px;
+      padding: 1rem;
       overflow-y: auto;
-      max-height: calc(100vh - 260px);
+      opacity: 1;
+      transition: opacity 0.3s ease;
+      border: 1px solid #333;
+      min-height: 0;
     }
 
     .message {
-      margin: 0.2rem 0;
+      margin: 0.4rem 0;
+      padding: 0.3rem 0;
       animation: fadeIn 0.3s;
+      line-height: 1.4;
     }
 
     #input-area {
       display: flex;
-      margin-top: 0.5rem;
-      gap: 0.5rem;
+      margin-top: 0.75rem;
+      gap: 0.75rem;
     }
 
     #input {
       flex: 1;
-      padding: 0.5rem;
-      border: none;
-      border-radius: 4px;
+      padding: 0.6rem 0.8rem;
+      border: 2px solid transparent;
+      border-radius: 6px;
       background: #1e1e1e;
       color: #eee;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+
+    #input:focus {
+      outline: none;
+      border-color: #387ff5;
+      background: #1e1e1e;
+    }
+
+    #send {
+      padding: 0.6rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      background: #387ff5;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(56, 127, 245, 0.2);
+    }
+
+    #send:hover {
+      background: #2e6fd1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(56, 127, 245, 0.3);
+    }
+
+    #send:active {
+      transform: translateY(0);
     }
 
     /* back button */
@@ -323,7 +399,7 @@
       position: relative;
       margin-left: 0.5rem;
       display: flex;
-      gap: 0.5rem;
+      gap: 0.75rem;
       display: none;
       align-items: center;
     }
@@ -333,22 +409,24 @@
     }
 
     .footer-btn {
-      padding: 0.3rem 0.5rem;
-      margin-right: 15px;
+      padding: 0.5rem 1rem;
       background: #387ff5;
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       text-decoration: none;
-      transition: background 0.2s ease;
-      font-weight: bold;
-      font-size: 0.75rem;
+      transition: all 0.2s ease;
+      font-weight: 600;
+      font-size: 0.85rem;
       white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(56, 127, 245, 0.2);
     }
 
     .footer-btn:hover {
       background: #2e6fd1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(56, 127, 245, 0.3);
     }
 
     /* header and user-info styling */
@@ -358,52 +436,57 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 1rem;
+      margin-top: 0.6rem;
+      gap: 1rem;
     }
     .header h1 {
       margin: 0;
+      flex: 1;
     }
     .user-info {
       background: #1e1e1e;
       border: 2px solid #387ff5;
-      border-radius: 4px;
+      border-radius: 6px;
       color: #eee;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.4rem 0.6rem;
+      gap: 0.75rem;
+      padding: 0.6rem 0.8rem;
       position: relative;
     }
     .user-info span {
       font-weight: bold;
       cursor: pointer;
-      padding: 0.2rem 0.4rem;
-      border-radius: 3px;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
       transition: background 0.2s ease;
       flex-shrink: 0;
+      font-size: 0.95rem;
     }
     .user-info span:hover {
       background: rgba(56, 127, 245, 0.2);
     }
     .user-actions {
       display: flex;
-      gap: 0.4rem;
+      gap: 0.6rem;
       width: 100%;
       justify-content: center;
     }
     .menu-btn, #logout-btn {
-      padding: 0.3rem 0.6rem;
+      padding: 0.4rem 0.7rem;
       font-size: 0.8rem;
       background: #387ff5;
       color: #fff;
       border: none;
-      border-radius: 3px;
+      border-radius: 4px;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: all 0.2s ease;
+      font-weight: 500;
     }
     .menu-btn:hover, #logout-btn:hover {
       background: #2e6fd1;
+      transform: translateY(-1px);
     }
     /* user menu dropdown */
     .user-menu {
@@ -413,80 +496,108 @@
       right: 0;
       background: #1e1e1e;
       border: 2px solid #387ff5;
-      border-radius: 4px;
-      margin-top: 0.5rem;
-      min-width: 280px;
-      padding: 0.8rem;
+      border-radius: 6px;
+      margin-top: 0.75rem;
+      min-width: 300px;
+      padding: 1rem;
       z-index: 2001;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0.8rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
+
     .user-menu.show {
       display: flex;
     }
+
     .user-menu h3 {
-      margin: 0;
-      font-size: 0.9rem;
+      margin: 0 0 0.5rem 0;
+      font-size: 0.95rem;
       color: #eee;
+      font-weight: 600;
     }
+
     .menu-section {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.5rem;
     }
+
     .menu-section label {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: #aaa;
-      font-weight: bold;
+      font-weight: 600;
     }
+
     .color-picker-wrapper {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.6rem;
       align-items: center;
     }
+
     .user-menu input[type="color"] {
       width: 50px;
-      height: 32px;
-      border: none;
-      border-radius: 3px;
+      height: 36px;
+      border: 2px solid #387ff5;
+      border-radius: 4px;
       cursor: pointer;
     }
+
     .update-color-btn {
-      padding: 0.35rem 0.6rem;
+      padding: 0.4rem 0.75rem;
       font-size: 0.8rem;
-      border-radius: 3px;
+      border-radius: 4px;
       color: #fff;
       border: none;
       cursor: pointer;
+      background: #387ff5;
+      transition: all 0.2s ease;
     }
+
+    .update-color-btn:hover {
+      background: #2e6fd1;
+    }
+
     .color-value {
       font-size: 0.8rem;
       color: #aaa;
       flex-shrink: 0;
     }
+
     .user-menu input[type="password"],
     .user-menu input[type="text"] {
-      padding: 0.4rem;
-      border: none;
-      border-radius: 3px;
+      padding: 0.5rem 0.6rem;
+      border: 2px solid #333;
+      border-radius: 4px;
       background: #121212;
       color: #eee;
       width: 100%;
       box-sizing: border-box;
       font-size: 0.85rem;
+      transition: border-color 0.2s ease;
     }
+
+    .user-menu input[type="password"]:focus,
+    .user-menu input[type="text"]:focus {
+      outline: none;
+      border-color: #387ff5;
+    }
+
     .user-menu button {
-      padding: 0.4rem;
+      padding: 0.5rem;
       background: #387ff5;
       color: #fff;
       border: none;
-      border-radius: 3px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 0.8rem;
-      transition: background 0.2s ease;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
     }
+
     .user-menu button:hover {
       background: #2e6fd1;
+      transform: translateY(-1px);
     }
 
     /* badge for new private messages */
@@ -526,9 +637,138 @@
     }
 
     @media (max-width: 600px) {
-      #input-area { flex-direction: column; }
-      #input { margin-bottom: 0; }
-      .mode-buttons { flex-direction: column; }
+      h1 {
+        margin-top: 0;
+        font-size: clamp(1.15rem, 5vw, 1.45rem);
+        letter-spacing: 0.5px;
+      }
+
+      .header {
+        width: 94%;
+        margin-top: 0.4rem;
+        gap: 0.4rem;
+        align-items: stretch;
+      }
+
+      .footer-buttons {
+        width: auto;
+        margin-left: 0;
+        justify-content: flex-start;
+      }
+
+      .footer-btn {
+        padding: 0.3rem 0.55rem;
+        font-size: 0.7rem;
+      }
+
+      .mode-buttons {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .mode-btn {
+        padding: 0.5rem;
+        font-size: 0.82rem;
+      }
+
+      .top-buttons {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .top-btn {
+        padding: 0.42rem 0.5rem;
+        font-size: 0.74rem;
+      }
+
+      #input-area {
+        flex-direction: row;
+        gap: 0.45rem;
+        margin-top: 0.5rem;
+        padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-inset));
+        transition: padding-bottom 0.2s ease;
+      }
+
+      #input {
+        width: 100%;
+        min-width: 0;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.84rem;
+      }
+
+      #send {
+        padding: 0.48rem 0.8rem;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+
+      .container {
+        width: 94%;
+      }
+
+      #auth {
+        margin-top: 0.5rem;
+      }
+
+      form {
+        gap: 0.5rem;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        padding: 0.5rem 0.65rem;
+        font-size: 0.84rem;
+      }
+
+      button {
+        padding: 0.52rem;
+        font-size: 0.84rem;
+      }
+
+      .user-info {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.45rem;
+        padding: 0.35rem 0.45rem;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .user-info span {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.78rem;
+      }
+
+      .user-actions {
+        width: auto;
+        gap: 0.4rem;
+      }
+
+      .menu-btn, #logout-btn {
+        padding: 0.3rem 0.45rem;
+        font-size: 0.72rem;
+      }
+
+      .chat-mode-indicator {
+        padding: 0.42rem 0.5rem;
+        font-size: 0.74rem;
+      }
+
+      #messages {
+        padding: 0.6rem;
+      }
+
+      .user-menu {
+        right: 0;
+        transform: none;
+        min-width: min(92vw, 300px);
+        max-width: min(92vw, 300px);
+        padding: 0.75rem;
+        gap: 0.6rem;
+      }
     }
 
     /* toast notification */
@@ -561,16 +801,6 @@
     #messages.fading {
       opacity: 0;
       transition: opacity 0.3s ease;
-    }
-    #messages {
-      flex: 1;
-      background: #1e1e1e;
-      border-radius: 4px;
-      padding: 0.5rem;
-      overflow-y: auto;
-      opacity: 1;
-      transition: opacity 0.3s ease;
-      max-height: calc(100vh - 260px);
     }
   </style>
 </head>
@@ -608,7 +838,7 @@
       <form id="login-form">
         <input id="login-user" type="text" placeholder="Benutzername" required />
         <input id="login-pass" type="password" placeholder="Passwort" required />
-        <label style="font-size:0.85rem; display:flex; align-items:center; gap:0.3rem;">
+        <label style="font-size:0.80rem; display:flex; gap:0.2rem;">
           <input type="checkbox" id="remember-me" /> Angemeldet bleiben
         </label>
         <button type="submit">Anmelden</button>
@@ -687,6 +917,24 @@
     let privateChats = new Set(); // usernames we have private chats with
     let unreadCounts = {}; // {username: count}
 
+    function updateKeyboardInset() {
+      const root = document.documentElement;
+      if (!window.visualViewport) {
+        root.style.setProperty('--keyboard-inset', '0px');
+        return;
+      }
+      const vv = window.visualViewport;
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
+    }
+
+    updateKeyboardInset();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateKeyboardInset);
+      window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+    }
+    window.addEventListener('resize', updateKeyboardInset);
+    window.addEventListener('orientationchange', updateKeyboardInset);
 
     function updatePrivateChatsBadge() {
       const btn = document.getElementById('private-chats-btn');
