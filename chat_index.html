@@ -472,7 +472,7 @@
       border-radius: 6px;
       color: #eee;
       display: flex;
-      flex-direction: column;
+      flex-direction: grid;
       align-items: center;
       gap: 0.75rem;
       padding: 0.6rem 0.8rem;
@@ -491,11 +491,20 @@
       background: rgba(56, 127, 245, 0.2);
     }
     .user-actions {
-      display: flex;
+      align-self: flex-end;
+      display: inline-block;
       gap: 0.6rem;
       width: 100%;
+      
       justify-content: center;
     }
+    .user-display {
+      display: grid;
+      align-items: center;
+      
+      gap: 0.2rem;
+    }
+
     .menu-btn, #logout-btn {
       padding: 0.4rem 0.7rem;
       font-size: 0.8rem;
@@ -513,24 +522,34 @@
     }
     /* user menu dropdown */
     .user-menu {
-      display: none;
+      display: flex;
       position: absolute;
+      
       top: 100%;
       right: 0;
       background: #1e1e1e;
       border: 2px solid #387ff5;
       border-radius: 6px;
       margin-top: 0.75rem;
-      min-width: 300px;
+      min-width: 400px;
       padding: 1rem;
       z-index: 2001;
       flex-direction: column;
       gap: 0.8rem;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-8px) scale(0.98);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
     }
 
     .user-menu.show {
-      display: flex;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
     }
 
     .user-menu h3 {
@@ -786,7 +805,6 @@
 
       .user-menu {
         right: 0;
-        transform: none;
         min-width: min(92vw, 300px);
         max-width: min(92vw, 300px);
         padding: 0.75rem;
@@ -847,15 +865,17 @@
   </div>
   <header class="header">
     <h1>Dark Chat</h1>
-    <div class="footer-buttons show">
-      <a href="/index.html" class="footer-btn">🏠 Home</a>
-    </div>
+    
+    
     <div id="user-info" class="user-info" style="display: none;">
-      <img id="userAvatar" src="/avatars/default.webp">
-      <span id="username-display"></span>
-      <div class="user-actions">
-        <button class="menu-btn" id="menu-btn">⋯ mehr</button>
+      <div class="user-display"> 
+        <span id="username-display"></span>
+        <img id="userAvatar" src="/avatars/default.webp">
+      </div> 
+      <div class="user-actions"> 
+        <a href="/index.html" class="footer-btn">🏠 Home</a>
         <button id="logout-btn">🚪logout</button>
+        <button class="menu-btn" id="menu-btn">⋯ mehr</button>
       </div>
       <div id="user-menu" class="user-menu">
         <!-- menu content added dynamically -->
@@ -1240,6 +1260,7 @@
           obj.color = color;
           localStorage.setItem('chatSession', JSON.stringify(obj));
         }
+        document.getElementById('user-menu').classList.remove('show');
         showError('Farbe gespeichert!');
         setTimeout(() => showError(''), 2000);
       } catch (e) {
