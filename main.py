@@ -9,6 +9,60 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 import random, string
 
+
+# --- anti spam ------------------------------------------------------
+from collections import defaultdict
+import time
+import re
+
+
+MESSAGE_COOLDOWN = 1.0        # Sekunden zwischen Nachrichten
+MAX_MESSAGE_LENGTH = 400      # maximale Zeichen
+DUPLICATE_INTERVAL = 10       # Sekunden für duplicate check
+MAX_LINKS_PER_MESSAGE = 2     # maximale Anzahl von URLs in einer Nachricht
+
+
+last_message_time = defaultdict(float)
+last_message_content = {}
+last_message_content_time = {}
+
+# -------- div. Spam Filter --------
+def check_spam(username: str, content: str):
+    now = time.time()
+
+    # rate limit
+    if now - last_message_time[username] < MESSAGE_COOLDOWN:
+        return "Du sendest zu schnell."
+    # message length
+    if len(content) > MAX_MESSAGE_LENGTH:
+        return "Nachricht zu lang."
+    
+    # duplicate message spam
+    if username in last_message_content:
+        if (
+            content == last_message_content[username]
+            and now - last_message_content_time[username] < DUPLICATE_INTERVAL
+        ):
+            return "Duplicate Nachricht blockiert."
+        
+    # update tracking
+    last_message_time[username] = now
+    last_message_content[username] = content
+    last_message_content_time[username] = now
+    return None
+
+# -------- URL Spam Filter --------
+url_regex = re.compile(
+    r"(https?://\S+|www\.\S+|\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b)",
+    re.IGNORECASE
+)
+
+def has_too_many_links(content):
+    links = url_regex.findall(content)
+    return len(links) > MAX_LINKS_PER_MESSAGE
+
+
+
 # --- database setup ----------------------------------------------------------
 from sqlalchemy import create_engine, Boolean, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
@@ -433,6 +487,17 @@ async def websocket_endpoint(websocket: WebSocket):
             
             if msg_type == "PUBLIC":
                 content = parts[1] if len(parts) > 1 else ""
+
+                # URL Spam Filter
+                if has_too_many_links(content):
+                    await websocket.send_text("SYSTEM|Zu viele Links in der Nachricht.")
+                    continue
+
+                error = check_spam(username, content)
+                if error:
+                    await websocket.send_text(f"SYSTEM|{error}")
+                    continue
+                
                 with SessionLocal() as db:
                     db_msg = Message(username=username, content=content, target_user=None)
                     db.add(db_msg)
@@ -443,6 +508,16 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "PRIVATE":
                 target = parts[1] if len(parts) > 1 else ""
                 content = parts[2] if len(parts) > 2 else ""
+
+                # URL Spam Filter
+                if has_too_many_links(content):
+                    await websocket.send_text("SYSTEM|Zu viele Links in der Nachricht.")
+                    continue
+
+                error = check_spam(username, content)
+                if error:
+                    await websocket.send_text(f"SYSTEM|{error}")
+                    continue
                 if target:
                     with SessionLocal() as db:
                         db_msg = Message(username=username, content=content, target_user=target)

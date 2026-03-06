@@ -1389,6 +1389,11 @@
         const messages = document.getElementById('messages');
         const parts = event.data.split('|');
         
+        if (parts[0] === "SYSTEM") {
+          showToast(parts.slice(1).join("|"));
+          return;
+        }
+
         if (parts[0] === 'PUBLIC') {
           const fullMsg = parts.slice(1).join('|');
           // parse "time username: content"
