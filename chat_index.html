@@ -825,6 +825,20 @@
       opacity: 0;
       transition: opacity 0.3s ease;
     }
+
+    .user-info{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    #userAvatar{
+      width:36px;
+      height:36px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #444;
+    }
   </style>
 </head>
 <body>
@@ -837,6 +851,7 @@
       <a href="/index.html" class="footer-btn">🏠 Home</a>
     </div>
     <div id="user-info" class="user-info" style="display: none;">
+      <img id="userAvatar" src="/avatars/default.webp">
       <span id="username-display"></span>
       <div class="user-actions">
         <button class="menu-btn" id="menu-btn">⋯ mehr</button>
@@ -949,6 +964,65 @@
     window.addEventListener('resize', updateKeyboardInset);
     window.addEventListener('orientationchange', updateKeyboardInset);
 
+    // Klick auf verstecktes File-Input
+    function selectAvatar(){
+        document.getElementById("avatarUpload").click();
+    }
+
+    function updateAvatar() {
+        if (!currentUser) return;
+        const avatarImg = document.getElementById("userAvatar");
+        avatarImg.src = `/user-avatar/${currentUser}?` + Date.now();
+    }
+
+    // Upload-Funktion
+    async function uploadAvatar(){
+        const fileInput = document.getElementById("avatarUpload");
+        const file = fileInput.files[0];
+        if(!file) return;
+
+        if(!currentUser){
+            showToast("Du bist nicht eingeloggt.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch(`/upload-avatar/${currentUser}`, {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+            if(result.success){
+                // Verwende die URL vom Backend
+                document.getElementById("userAvatar").src = result.avatar + '?' + Date.now();
+            } else {
+                showToast("Avatar konnte nicht hochgeladen werden.");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Fehler beim Upload.");
+        }
+    }
+
+    window.addEventListener("load", () => {
+        // Benutzername anzeigen
+        document.getElementById("username-display").textContent = currentUser;
+
+        // Benutzer-Avatar laden
+        const avatarImg = document.getElementById("userAvatar");
+        avatarImg.src = `/user-avatar/${currentUser}?` + Date.now();
+
+        // FileInput Eventlistener
+        const avatarInput = document.getElementById("avatarUpload");
+        if (avatarInput) {
+            avatarInput.addEventListener("change", uploadAvatar);
+        }
+    });
+
     function updatePrivateChatsBadge() {
       const btn = document.getElementById('private-chats-btn');
       if (!btn) return;
@@ -1045,6 +1119,7 @@
       display.textContent = currentUser;
       display.style.color = currentUserColor;
       info.style.display = 'flex';
+      updateAvatar();
       buildUserMenu();
     }
 
@@ -1074,6 +1149,10 @@
             </div>
           </div>
           <div class="menu-section">
+            <input type="file" id="avatarUpload" style="display:none" accept="image/*">
+            <button onclick="selectAvatar()">Avatar ändern</button>
+          </div>
+          <div class="menu-section">
             <button id="toggle-password-btn">Passwort ändern</button>
             <div id="password-section" style="display: none;" class="password-section">
               <input type="password" id="old-pass" placeholder="Altes Passwort" />
@@ -1081,6 +1160,7 @@
               <button id="change-pass-btn">Ändern</button>
             </div>
           </div>
+          
         `;
 
         const colorPicker = document.getElementById('color-picker');
@@ -1278,6 +1358,8 @@
         currentToken = data.access_token;
         currentUserColor = data.color || "#ffffff";
         currentUserIsGuest = false;
+
+        updateAvatar();
         const remember = document.getElementById('remember-me').checked;
         if (remember) {
           localStorage.setItem('chatSession', JSON.stringify({
@@ -1329,6 +1411,7 @@
         currentToken = null;
         currentUserColor = data.color || "#ffffff";
         currentUserIsGuest = true;
+        updateAvatar();
         startChat();
         showUserInfo();
       } catch (err) {
@@ -1353,6 +1436,7 @@
           currentToken = obj.token;
           currentUserColor = obj.color || "#ffffff";
           currentUserIsGuest = false;
+          updateAvatar();
           // restore private chats from localStorage
           if (obj.privateChats && Array.isArray(obj.privateChats)) {
             privateChats = new Set(obj.privateChats);
@@ -1613,6 +1697,7 @@
       currentToken = null;
       currentUserColor = "#ffffff";
       currentUserIsGuest = false;
+      updateAvatar();
       activeMode = null;
       currentChat = null;
       privateChats.clear();

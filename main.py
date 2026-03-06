@@ -10,17 +10,27 @@ from passlib.context import CryptContext
 import random, string
 
 
+# --- Avatar-Sys ---------------------------------------------------------
+from fastapi.responses import FileResponse
+from fastapi import UploadFile, File
+import shutil
+import os
+
+# absoluter Pfad zum Projektordner
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+AVATAR_FOLDER = os.path.join(BASE_DIR, "avatars")
+# Ordner existiert? Wenn nicht, erstellen
+os.makedirs(AVATAR_FOLDER, exist_ok=True)
+
 # --- anti spam ------------------------------------------------------
 from collections import defaultdict
 import time
 import re
 
-
 MESSAGE_COOLDOWN = 1.0        # Sekunden zwischen Nachrichten
 MAX_MESSAGE_LENGTH = 400      # maximale Zeichen
 DUPLICATE_INTERVAL = 10       # Sekunden für duplicate check
 MAX_LINKS_PER_MESSAGE = 2     # maximale Anzahl von URLs in einer Nachricht
-
 
 last_message_time = defaultdict(float)
 last_message_content = {}
@@ -528,3 +538,39 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(f"PRIVATE|{target}|{ts} du: {content}")
     except WebSocketDisconnect:
         manager.disconnect(username)
+
+
+    # statische Dateien mounten
+app.mount("/avatars", StaticFiles(directory=AVATAR_FOLDER), name="avatars")
+
+@app.post("/upload-avatar/{username}")
+async def upload_avatar(username: str, file: UploadFile = File(...)):
+    if not username or username == "null":
+        return {"error": "invalid username"}
+
+    ext = file.filename.split(".")[-1].lower()
+    if ext not in ["png", "jpg", "jpeg", "webp"]:
+        return JSONResponse({"error": "invalid file type"}, status_code=400)
+
+    # absoluter Pfad zum Speichern
+    filepath = os.path.join(AVATAR_FOLDER, f"{username}.{ext}")
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # URL für Frontend
+    avatar_url = f"/avatars/{username}.{ext}"
+    return {"success": True, "avatar": avatar_url}
+
+
+@app.get("/user-avatar/{username}")
+async def get_user_avatar(username: str):
+    AVATAR_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "avatars")
+    
+    # Prüfe, ob ein Avatar für genau diesen Benutzer existiert
+    for ext in ["png", "jpg", "jpeg", "webp"]:
+        filepath = os.path.join(AVATAR_FOLDER, f"{username}.{ext}")
+        if os.path.exists(filepath):
+            return FileResponse(filepath)
+    
+    # Keine Datei gefunden → Default zurückgeben
+    return FileResponse(os.path.join(AVATAR_FOLDER, "default.webp"))
