@@ -102,6 +102,13 @@ class Message(Base):
     target_user = Column(String, nullable=True, index=True)  # None = public, username = private message
 
 
+class DeletedUser(Base):
+    __tablename__ = "deleted_users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    deleted_at = Column(DateTime, default=datetime.utcnow)
+
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -189,6 +196,11 @@ class UpdateColorSchema(BaseModel):
     color: str
 
 
+class DeleteAccountSchema(BaseModel):
+    username: str
+    password: Optional[str] = None
+
+
 # --- application -------------------------------------------------------------
 
 app = FastAPI()
@@ -218,6 +230,9 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == user.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already registered")
+    deleted_name = db.query(DeletedUser).filter(DeletedUser.username == user.username).first()
+    if deleted_name:
+        raise HTTPException(status_code=400, detail="Username is not available")
     hashed = get_password_hash(user.password)
     db_user = User(username=user.username, hashed_password=hashed, is_anonymous=False, color="#ffffff")
     db.add(db_user)
@@ -302,7 +317,7 @@ class ConnectionManager:
 def guest(db: Session = Depends(get_db)):
     uname = random_username()
     # ensure uniqueness (if collision, try again)
-    while db.query(User).filter(User.username == uname).first():
+    while db.query(User).filter(User.username == uname).first() or db.query(DeletedUser).filter(DeletedUser.username == uname).first():
         uname = random_username()
     db_user = User(username=uname, hashed_password=None, is_anonymous=True, color="#ffffff")
     db.add(db_user)
@@ -401,6 +416,59 @@ def get_user_color(username: str, db: Session = Depends(get_db)):
     if not db_user:
         return {"color": "#ffffff"}  # default white if user not found
     return {"color": db_user.color}
+
+
+@app.get("/deleted-users")
+@app.get("/chat/deleted-users")
+def get_deleted_users(db: Session = Depends(get_db)):
+    names = db.query(DeletedUser).with_entities(DeletedUser.username).all()
+    return {"users": [n.username for n in names]}
+
+
+@app.post("/delete-account")
+@app.post("/chat/delete-account")
+async def delete_account(data: DeleteAccountSchema, db: Session = Depends(get_db)):
+    username = (data.username or "").strip()
+    password = data.password or ""
+
+    if not username:
+        raise HTTPException(status_code=400, detail="Username required")
+
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if db_user.hashed_password:
+        if not password:
+            raise HTTPException(status_code=400, detail="Password required")
+        if not verify_password(password, db_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Password is incorrect")
+
+    existing_deleted = db.query(DeletedUser).filter(DeletedUser.username == username).first()
+    if not existing_deleted:
+        db.add(DeletedUser(username=username))
+
+    db.delete(db_user)
+
+    for ext in ["png", "jpg", "jpeg", "webp"]:
+        avatar_file = os.path.join(AVATAR_FOLDER, f"{username}.{ext}")
+        if os.path.exists(avatar_file):
+            try:
+                os.remove(avatar_file)
+            except OSError:
+                pass
+
+    db.commit()
+
+    if username in manager.active_connections:
+        try:
+            await manager.active_connections[username].close()
+        except Exception:
+            pass
+        manager.disconnect(username)
+
+    await manager.broadcast(f"ACCOUNT_DELETED|{username}")
+    return {"success": True, "username": username}
 
 
 

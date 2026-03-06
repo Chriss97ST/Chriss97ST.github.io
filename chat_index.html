@@ -348,6 +348,82 @@
       line-height: 1.4;
     }
 
+    .message-user {
+      cursor: pointer;
+    }
+
+    .message-user:hover {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+
+    .user-quick-menu {
+      position: fixed;
+      min-width: 180px;
+      background: #1e1e1e;
+      border: 1px solid #387ff5;
+      border-radius: 8px;
+      padding: 0.65rem;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      z-index: 2200;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .user-quick-menu.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .user-quick-header {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .user-quick-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid #333;
+      object-fit: cover;
+      background: #111;
+      flex-shrink: 0;
+    }
+
+    .user-quick-name {
+      color: #eee;
+      font-size: 0.9rem;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 130px;
+    }
+
+    .user-quick-action {
+      width: 100%;
+      padding: 0.45rem 0.6rem;
+      border: none;
+      border-radius: 6px;
+      background: #387ff5;
+      color: #fff;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .user-quick-action:hover {
+      background: #2e6fd1;
+    }
+
     #input-area {
       display: flex;
       margin-top: 0.75rem;
@@ -640,6 +716,14 @@
     .user-menu button:hover {
       background: #2e6fd1;
       transform: translateY(-1px);
+    }
+
+    .user-menu button.danger-btn {
+      background: #c62828;
+    }
+
+    .user-menu button.danger-btn:hover {
+      background: #b71c1c;
     }
 
     /* badge for new private messages */
@@ -964,6 +1048,23 @@
     let currentChat = null; // null = public, username = private chat
     let privateChats = new Set(); // usernames we have private chats with
     let unreadCounts = {}; // {username: count}
+    let activeUserQuickMenu = null;
+    let deletedUsers = new Set();
+
+    function getDisplayUsername(username) {
+      if (!username) return '';
+      return deletedUsers.has(username) ? `${username} (gelöscht)` : username;
+    }
+
+    async function refreshDeletedUsers() {
+      try {
+        const res = await fetch(BACKEND_URL + '/deleted-users');
+        const data = await res.json();
+        deletedUsers = new Set(data.users || []);
+      } catch (e) {
+        console.warn('Failed to load deleted users', e);
+      }
+    }
 
     function updateKeyboardInset() {
       const root = document.documentElement;
@@ -1066,6 +1167,9 @@
     }
 
     async function getUserColor(username) {
+      if (deletedUsers.has(username)) {
+        return "#888888";
+      }
       if (username === currentUser) {
         return currentUserColor;
       }
@@ -1092,9 +1196,14 @@
       timeSpan.style.color = '#aaa';
       
       const userSpan = document.createElement('span');
-      userSpan.textContent = username + ': ';
+      userSpan.textContent = getDisplayUsername(username) + ': ';
       userSpan.style.color = color;
       userSpan.style.fontWeight = 'bold';
+      userSpan.className = 'message-user';
+      userSpan.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showUserQuickMenu(username, userSpan);
+      });
       
       const contentSpan = document.createElement('span');
       contentSpan.textContent = content;
@@ -1103,6 +1212,82 @@
       div.appendChild(userSpan);
       div.appendChild(contentSpan);
       return div;
+    }
+
+    function closeUserQuickMenu() {
+      if (!activeUserQuickMenu) return;
+      activeUserQuickMenu.remove();
+      activeUserQuickMenu = null;
+    }
+
+    function showUserQuickMenu(username, anchorEl) {
+      closeUserQuickMenu();
+
+      const menu = document.createElement('div');
+      menu.className = 'user-quick-menu';
+
+      const header = document.createElement('div');
+      header.className = 'user-quick-header';
+
+      const avatar = document.createElement('img');
+      avatar.className = 'user-quick-avatar';
+      avatar.src = `/user-avatar/${encodeURIComponent(username)}?${Date.now()}`;
+      avatar.alt = `Avatar von ${username}`;
+
+      const name = document.createElement('div');
+      name.className = 'user-quick-name';
+      name.textContent = getDisplayUsername(username);
+
+      const actionBtn = document.createElement('button');
+      actionBtn.className = 'user-quick-action';
+      actionBtn.type = 'button';
+      actionBtn.textContent = 'Privaten Chat öffnen';
+      if (username === currentUser) {
+        actionBtn.textContent = 'Das bist du';
+        actionBtn.disabled = true;
+        actionBtn.style.opacity = '0.6';
+        actionBtn.style.cursor = 'not-allowed';
+      } else if (deletedUsers.has(username)) {
+        actionBtn.textContent = 'Account gelöscht';
+        actionBtn.disabled = true;
+        actionBtn.style.opacity = '0.6';
+        actionBtn.style.cursor = 'not-allowed';
+      }
+
+      header.appendChild(avatar);
+      header.appendChild(name);
+      menu.appendChild(header);
+      menu.appendChild(actionBtn);
+
+      menu.addEventListener('click', (e) => e.stopPropagation());
+      document.body.appendChild(menu);
+
+      const rect = anchorEl.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const margin = 8;
+      let left = rect.left;
+      let top = rect.bottom + 6;
+
+      if (left + menuRect.width > window.innerWidth - margin) {
+        left = window.innerWidth - menuRect.width - margin;
+      }
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = rect.top - menuRect.height - 6;
+      }
+      if (left < margin) left = margin;
+      if (top < margin) top = margin;
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+
+      actionBtn.addEventListener('click', () => {
+        if (username === currentUser || deletedUsers.has(username)) return;
+        closeUserQuickMenu();
+        openPrivateChat(username);
+      });
+
+      requestAnimationFrame(() => menu.classList.add('show'));
+      activeUserQuickMenu = menu;
     }
 
     
@@ -1149,14 +1334,18 @@
       
       if (currentUserIsGuest) {
         // Guest: show password registration option
-        menu.innerHTML = `
+         menu.innerHTML = `
           <div class="menu-section">
             <h3>Account registrieren</h3>
             <input type="password" id="guest-pass" placeholder="Neues Passwort" />
             <button id="register-guest-btn">Account sichern</button>
           </div>
+          <div class="menu-section">
+            <button id="delete-account-btn" class="danger-btn">Account löschen</button>
+          </div>
         `;
         document.getElementById('register-guest-btn').addEventListener('click', registerGuest);
+        document.getElementById('delete-account-btn').addEventListener('click', deleteAccount);
       } else {
         // Registered: show color picker and expandable password change
         menu.innerHTML = `
@@ -1172,13 +1361,16 @@
             <input type="file" id="avatarUpload" style="display:none" accept="image/*">
             <button onclick="selectAvatar()">Avatar ändern</button>
           </div>
-          <div class="menu-section">
+           <div class="menu-section">
             <button id="toggle-password-btn">Passwort ändern</button>
             <div id="password-section" style="display: none;" class="password-section">
               <input type="password" id="old-pass" placeholder="Altes Passwort" />
               <input type="password" id="new-pass" placeholder="Neues Passwort" />
               <button id="change-pass-btn">Ändern</button>
             </div>
+          </div>
+          <div class="menu-section">
+            <button id="delete-account-btn" class="danger-btn">Account löschen</button>
           </div>
           
         `;
@@ -1197,6 +1389,7 @@
         });
 
         document.getElementById('change-pass-btn').addEventListener('click', changePassword);
+        document.getElementById('delete-account-btn').addEventListener('click', deleteAccount);
       }
     }
 
@@ -1238,6 +1431,45 @@
         buildUserMenu();
         showError('Account erfolgreich registriert!');
         setTimeout(() => showError(''), 2000);
+      } catch (e) {
+        showError('Fehler: ' + e.message);
+      }
+    }
+
+    async function deleteAccount() {
+      if (!currentUser) return;
+
+      const firstConfirm = confirm('Möchtest du deinen Account wirklich löschen?');
+      if (!firstConfirm) return;
+
+      const secondConfirm = confirm('Letzte Bestätigung: Diese Löschung kann nicht rückgängig gemacht werden. Fortfahren?');
+      if (!secondConfirm) return;
+
+      let password = null;
+      if (!currentUserIsGuest) {
+        password = prompt('Bitte gib zur Bestätigung dein Passwort ein:');
+        if (password === null) return;
+        if (!password.trim()) {
+          showError('Passwort erforderlich.');
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch(BACKEND_URL + '/delete-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser, password: password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Account konnte nicht gelöscht werden');
+        }
+
+        deletedUsers.add(currentUser);
+        closeUserQuickMenu();
+        showError('Account wurde gelöscht.');
+        document.getElementById('logout-btn').click();
       } catch (e) {
         showError('Fehler: ' + e.message);
       }
@@ -1356,12 +1588,16 @@
     // Close menu when clicking outside
     document.addEventListener('click', () => {
       document.getElementById('user-menu').classList.remove('show');
+      closeUserQuickMenu();
     });
 
     // Close menu when clicking inside it (prevent bubbling)
     document.getElementById('user-menu').addEventListener('click', (e) => {
       e.stopPropagation();
     });
+
+    document.getElementById('messages').addEventListener('scroll', closeUserQuickMenu);
+    window.addEventListener('resize', closeUserQuickMenu);
 
     // Mode buttons
     document.getElementById('login-mode-btn').addEventListener('click', () => setMode('login'));
@@ -1443,6 +1679,7 @@
     async function startChat() {
       document.getElementById('auth').style.display = 'none';
       document.getElementById('chat').style.display = 'flex';
+      await refreshDeletedUsers();
       await loadPeers();
       connectWs();
     }
@@ -1499,6 +1736,19 @@
           return;
         }
 
+        if (parts[0] === "ACCOUNT_DELETED") {
+          const deletedUsername = parts.slice(1).join("|");
+          if (deletedUsername) {
+            deletedUsers.add(deletedUsername);
+            userColorCache[deletedUsername] = "#888888";
+            if (currentChat === deletedUsername) {
+              document.getElementById('chat-mode').textContent = `Chat mit ${getDisplayUsername(deletedUsername)}`;
+            }
+            loadHistory(currentChat);
+          }
+          return;
+        }
+
         if (parts[0] === 'PUBLIC') {
           const fullMsg = parts.slice(1).join('|');
           // parse "time username: content"
@@ -1539,7 +1789,7 @@
                 }
               }
             }
-            showToast(`Nachricht v.: ${sender}`, sender);
+            showToast(`Nachricht v.: ${getDisplayUsername(sender)}`, sender);
           }
           privateChats.add(sender);
         }
@@ -1586,7 +1836,7 @@
       privateChats.forEach(username => {
         const li = document.createElement('li');
         const nameSpan = document.createElement('span');
-        nameSpan.textContent = username;
+        nameSpan.textContent = getDisplayUsername(username);
         li.appendChild(nameSpan);
         const count = unreadCounts[username] || 0;
         if (count > 0) {
@@ -1693,7 +1943,7 @@
         }
         }
       document.getElementById('messages').innerHTML = '';
-      document.getElementById('chat-mode').textContent = `Chat mit ${username}`;
+      document.getElementById('chat-mode').textContent = `Chat mit ${getDisplayUsername(username)}`;
       document.getElementById('private-chats-modal').classList.remove('show');
       document.getElementById('registered-users-modal').classList.remove('show');
       document.getElementById('input').focus();
@@ -1739,3 +1989,4 @@
     });  </script>
 </body>
 </html>
+
