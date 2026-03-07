@@ -266,6 +266,48 @@
       font-size: 1.3rem;
     }
 
+    
+    .confirm-text {
+      margin: 0 0 1rem 0;
+      color: #ddd;
+      line-height: 1.4;
+    }
+
+    .confirm-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.6rem 0.7rem;
+      border: 2px solid #333;
+      border-radius: 6px;
+      background: #121212;
+      color: #eee;
+      margin-bottom: 1rem;
+    }
+
+    .confirm-input:focus {
+      outline: none;
+      border-color: #387ff5;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+    }
+
+    .confirm-actions .danger-btn {
+      background: #c62828;
+    }
+
+    .confirm-actions .danger-btn:hover {
+      background: #b71c1c;
+    }
+
+    .confirm-actions .danger-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .close {
       position: absolute;
       top: 1rem;
@@ -757,6 +799,36 @@
       gap: 0.4rem;
     }
 
+    .delete-account-confirm {
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+      padding: 0.55rem;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      background: #171717;
+    }
+
+    .delete-account-confirm .confirm-actions {
+      margin-top: 0.15rem;
+    }
+
+    .confirm-check-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.9rem;
+      color: #ddd;
+    }
+
+    .confirm-check-row input[type="checkbox"] {
+      margin: 0;
+      width: 15px;
+      height: 15px;
+      accent-color: #d63c3c;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
@@ -1162,10 +1234,6 @@
       }
     }
 
-    function showError(msg) {
-      document.getElementById('error').textContent = msg;
-    }
-
     async function getUserColor(username) {
       if (deletedUsers.has(username)) {
         return "#888888";
@@ -1290,8 +1358,6 @@
       activeUserQuickMenu = menu;
     }
 
-    
-
     function showError(msg) {
       document.getElementById('error').textContent = msg;
     }
@@ -1340,14 +1406,10 @@
             <input type="password" id="guest-pass" placeholder="Neues Passwort" />
             <button id="register-guest-btn">Account sichern</button>
           </div>
-          <div class="menu-section">
-            <button id="delete-account-btn" class="danger-btn">Account löschen</button>
-          </div>
         `;
         document.getElementById('register-guest-btn').addEventListener('click', registerGuest);
-        document.getElementById('delete-account-btn').addEventListener('click', deleteAccount);
-      } else {
-        // Registered: show color picker and expandable password change
+        } else {
+        // Registered: show color picker and expandable password change + delete option
         menu.innerHTML = `
           <div class="menu-section">
             <label>Namensfarbe</label>
@@ -1370,9 +1432,20 @@
             </div>
           </div>
           <div class="menu-section">
-            <button id="delete-account-btn" class="danger-btn">Account löschen</button>
+            <button id="delete-account-btn" class="danger-btn">Account löschen...</button>
+            <div id="delete-account-confirm" class="delete-account-confirm">
+              <p id="delete-account-confirm-text" class="confirm-text"></p>
+              <label class="confirm-check-row">
+                <input id="delete-account-confirm-check" type="checkbox" />
+                <span>Account >endgültig< löschen.</span>
+              </label>
+              <input id="delete-account-confirm-password" class="confirm-input" type="password" placeholder="Passwort" style="display:none" />
+              <div class="confirm-actions">
+                <button id="delete-account-cancel-btn" type="button">Abbrechen</button>
+                <button id="delete-account-confirm-btn" type="button" class="danger-btn" disabled>Account löschen</button>
+              </div>
+            </div>          
           </div>
-          
         `;
 
         const colorPicker = document.getElementById('color-picker');
@@ -1390,6 +1463,10 @@
 
         document.getElementById('change-pass-btn').addEventListener('click', changePassword);
         document.getElementById('delete-account-btn').addEventListener('click', deleteAccount);
+        document.getElementById('delete-account-cancel-btn').addEventListener('click', cancelDeleteAccountFlow);
+        document.getElementById('delete-account-confirm-btn').addEventListener('click', confirmDeleteAccountFlow);
+        document.getElementById('delete-account-confirm-check').addEventListener('change', updateDeleteAccountConfirmState);
+        document.getElementById('delete-account-confirm-password').addEventListener('input', updateDeleteAccountConfirmState);
       }
     }
 
@@ -1436,24 +1513,79 @@
       }
     }
 
-    async function deleteAccount() {
-      if (!currentUser) return;
+    function deleteAccount() {
+      const box = document.getElementById('delete-account-confirm');
+      const text = document.getElementById('delete-account-confirm-text');
+      const check = document.getElementById('delete-account-confirm-check');
+      const pass = document.getElementById('delete-account-confirm-password');
+      const confirmBtn = document.getElementById('delete-account-confirm-btn');
+      const toggleBtn = document.getElementById('delete-account-btn');
+      if (!box || !text || !check || !pass || !confirmBtn || !toggleBtn) return;
 
-      const firstConfirm = confirm('Möchtest du deinen Account wirklich löschen?');
-      if (!firstConfirm) return;
+      const open = box.style.display !== 'flex';
+      if (!open) {
+        cancelDeleteAccountFlow();
+        return;
+      }
 
-      const secondConfirm = confirm('Letzte Bestätigung: Diese Löschung kann nicht rückgängig gemacht werden. Fortfahren?');
-      if (!secondConfirm) return;
+      box.style.display = 'flex';
+      text.textContent = currentUserIsGuest
+        ? 'Löschung kann nicht rückgängig gemacht werden.'
+        : 'Löschung ist endgültig. Passwort eingeben.';
+      check.checked = false;
+      pass.style.display = currentUserIsGuest ? 'none' : 'block';
+      pass.value = '';
+      confirmBtn.disabled = true;
+      toggleBtn.textContent = 'Löschen verbergen';
+      updateDeleteAccountConfirmState();
+      if (!currentUserIsGuest) setTimeout(() => pass.focus(), 20);
+    }
 
-      let password = null;
-      if (!currentUserIsGuest) {
-        password = prompt('Bitte gib zur Bestätigung dein Passwort ein:');
-        if (password === null) return;
-        if (!password.trim()) {
+    function cancelDeleteAccountFlow() {
+      const box = document.getElementById('delete-account-confirm');
+      const check = document.getElementById('delete-account-confirm-check');
+      const pass = document.getElementById('delete-account-confirm-password');
+      const confirmBtn = document.getElementById('delete-account-confirm-btn');
+      const toggleBtn = document.getElementById('delete-account-btn');
+      if (!box || !check || !pass || !confirmBtn || !toggleBtn) return;
+      box.style.display = 'none';
+      check.checked = false;
+      pass.value = '';
+      pass.style.display = 'none';
+      confirmBtn.disabled = true;
+      toggleBtn.textContent = 'Account löschen...';
+    }
+
+    function updateDeleteAccountConfirmState() {
+      const check = document.getElementById('delete-account-confirm-check');
+      const pass = document.getElementById('delete-account-confirm-password');
+      const confirmBtn = document.getElementById('delete-account-confirm-btn');
+      if (!check || !pass || !confirmBtn) return;
+
+      const hasPassword = currentUserIsGuest || pass.value.trim().length > 0;
+      confirmBtn.disabled = !(check.checked && hasPassword);
+    }
+
+    async function confirmDeleteAccountFlow() {
+      const box = document.getElementById('delete-account-confirm');
+      const text = document.getElementById('delete-account-confirm-text');
+      const check = document.getElementById('delete-account-confirm-check');
+      const pass = document.getElementById('delete-account-confirm-password');
+      const confirmBtn = document.getElementById('delete-account-confirm-btn');
+      if (!box || !text || !check || !pass || !confirmBtn || !currentUser) return;
+
+      if (!check.checked) {
+        showError('Bitte das Bestätigungsfeld aktivieren.');
+        return;
+      }
+
+      const password = currentUserIsGuest ? '' : pass.value;
+      if (!currentUserIsGuest && !password.trim()) {
+        showError('Passwort erforderlich.');
+        return;
           showError('Passwort erforderlich.');
           return;
         }
-      }
 
       try {
         const res = await fetch(BACKEND_URL + '/delete-account', {
