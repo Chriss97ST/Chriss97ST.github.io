@@ -388,6 +388,17 @@
       padding: 0.3rem 0;
       animation: fadeIn 0.3s;
       line-height: 1.4;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .message-jump-highlight {
+      animation: jumpHighlight 1.1s ease;
+    }
+
+    @keyframes jumpHighlight {
+      0% { background: rgba(56, 127, 245, 0.40); }
+      100% { background: transparent; }
     }
 
     .message-user {
@@ -464,6 +475,106 @@
 
     .user-quick-action:hover {
       background: #2e6fd1;
+    }
+
+    .message-quick-menu {
+      position: fixed;
+      min-width: 165px;
+      background: #1e1e1e;
+      border: 1px solid #387ff5;
+      border-radius: 8px;
+      padding: 0.5rem;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      z-index: 2300;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .message-quick-menu.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .message-quick-action {
+      width: 100%;
+      text-align: left;
+      padding: 0.42rem 0.55rem;
+      border: none;
+      border-radius: 6px;
+      background: #2a2a2a;
+      color: #eee;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .message-quick-action:hover {
+      background: #387ff5;
+    }
+
+    .message-reply {
+      margin-bottom: 0.2rem;
+      border-left: 2px solid #4b4b4b;
+      padding-left: 0.45rem;
+      color: #a8a8a8;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      cursor: pointer;
+    }
+
+    .message-reply:hover {
+      color: #d5d5d5;
+      border-left-color: #7e7e7e;
+    }
+
+    .message-edited {
+      color: #8f8f8f;
+      font-size: 0.78rem;
+      margin-left: 0.35rem;
+    }
+
+    .compose-context {
+      margin-top: 0.75rem;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #171717;
+      padding: 0.4rem 0.55rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: #d0d0d0;
+      font-size: 0.83rem;
+    }
+
+    #compose-context-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    #compose-cancel {
+      border: none;
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      padding: 0.28rem 0.55rem;
+      cursor: pointer;
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    #compose-cancel:hover {
+      background: #4d4d4d;
     }
 
     #input-area {
@@ -1076,6 +1187,10 @@
         <div class="chat-mode-indicator" id="chat-mode">Öffentlicher Chat</div>
       </div>
       <div id="messages"></div>
+      <div id="compose-context" class="compose-context">
+        <div id="compose-context-text"></div>
+        <button id="compose-cancel" type="button">Abbrechen</button>
+      </div>
       <div id="input-area">
         <input id="input" type="text" placeholder="Nachricht eingeben" autocomplete="off" />
         <button id="send">Senden</button>
@@ -1121,7 +1236,11 @@
     let privateChats = new Set(); // usernames we have private chats with
     let unreadCounts = {}; // {username: count}
     let activeUserQuickMenu = null;
+    let activeMessageQuickMenu = null;
     let deletedUsers = new Set();
+    let messageLookup = new Map();
+    let pendingReply = null;
+    let pendingEdit = null;
 
     function getDisplayUsername(username) {
       if (!username) return '';
@@ -1254,31 +1373,146 @@
       }
     }
 
-    async function renderMessageWithColor(username, content, time) {
+    function truncateSnippet(text, maxLen = 65) {
+      const value = (text || '').replace(/\s+/g, ' ').trim();
+      return value.length > maxLen ? value.slice(0, maxLen - 1) + '…' : value;
+    }
+
+    function parseServerTimestamp(ts) {
+      if (!ts) return new Date(0);
+      if (/[zZ]$|[+\-]\d{2}:\d{2}$/.test(ts)) return new Date(ts);
+      return new Date(ts + 'Z');
+    }
+
+    function isWithinEditWindow(message) {
+      if (!message || message.username !== currentUser || !message.timestamp) return false;
+      return (Date.now() - parseServerTimestamp(message.timestamp).getTime()) <= (30 * 60 * 1000);
+    }
+
+    function getRemainingEdits(message) {
+      if (!message) return 0;
+      if (typeof message.remaining_edits === 'number') return Math.max(0, message.remaining_edits);
+      const used = Number(message.edit_count || 0);
+      return Math.max(0, 2 - used);
+    }
+
+    function canEditMessage(message) {
+      return !!message && message.username === currentUser && isWithinEditWindow(message) && getRemainingEdits(message) > 0;
+    }
+
+    function messageBelongsToCurrentView(message) {
+      if (!message) return false;
+      if (currentChat === null) return message.target_user === null;
+      return (
+        (message.username === currentUser && message.target_user === currentChat) ||
+        (message.username === currentChat && message.target_user === currentUser)
+      );
+    }
+
+    function getPrivatePeer(message) {
+      if (!message || message.target_user === null) return null;
+      return message.username === currentUser ? message.target_user : message.username;
+    }
+
+    function jumpToMessage(messageId) {
+      if (!messageId) return;
+      const node = document.querySelector(`#messages [data-message-id="${messageId}"]`);
+      if (!node) {
+        showToast('Originalnachricht ist im aktuellen Verlauf nicht sichtbar.');
+        return;
+      }
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.classList.remove('message-jump-highlight');
+      void node.offsetWidth;
+      node.classList.add('message-jump-highlight');
+      setTimeout(() => node.classList.remove('message-jump-highlight'), 1200);
+    }
+
+    function resetComposeState() {
+      pendingReply = null;
+      pendingEdit = null;
+      const ctx = document.getElementById('compose-context');
+      const txt = document.getElementById('compose-context-text');
+      txt.textContent = '';
+      ctx.style.display = 'none';
+    }
+
+    function setReplyTarget(message) {
+      pendingEdit = null;
+      pendingReply = message;
+      const ctx = document.getElementById('compose-context');
+      const txt = document.getElementById('compose-context-text');
+      txt.textContent = `Antwort an ${getDisplayUsername(message.username)}: ${truncateSnippet(message.content)}`;
+      ctx.style.display = 'flex';
+      document.getElementById('input').focus();
+    }
+
+    function setEditTarget(message) {
+      pendingReply = null;
+      pendingEdit = message;
+      const ctx = document.getElementById('compose-context');
+      const txt = document.getElementById('compose-context-text');
+      txt.textContent = `Bearbeite Nachricht: ${truncateSnippet(message.content)}`;
+      ctx.style.display = 'flex';
+      const input = document.getElementById('input');
+      input.value = message.content || '';
+      input.focus();
+    }
+
+    async function renderMessageWithColor(message) {
       const div = document.createElement('div');
       div.className = 'message';
-      const color = await getUserColor(username);
-      
+      div.dataset.messageId = String(message.id);
+      const color = await getUserColor(message.username);
+      const time = parseServerTimestamp(message.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: false});
+
+      if (message.reply_to) {
+        const reply = document.createElement('div');
+        reply.className = 'message-reply';
+        reply.textContent = `↪ ${getDisplayUsername(message.reply_to.username)}: ${truncateSnippet(message.reply_to.content)}`;
+        reply.title = 'Zur Originalnachricht springen';
+        reply.addEventListener('click', (e) => {
+          e.stopPropagation();
+          jumpToMessage(message.reply_to.id);
+        });
+        div.appendChild(reply);
+      }
+
+      const line = document.createElement('div');
+
       const timeSpan = document.createElement('span');
       timeSpan.textContent = time + ' ';
       timeSpan.style.color = '#aaa';
-      
+
       const userSpan = document.createElement('span');
-      userSpan.textContent = getDisplayUsername(username) + ': ';
+      userSpan.textContent = getDisplayUsername(message.username) + ': ';
       userSpan.style.color = color;
       userSpan.style.fontWeight = 'bold';
       userSpan.className = 'message-user';
       userSpan.addEventListener('click', (e) => {
         e.stopPropagation();
-        showUserQuickMenu(username, userSpan);
+        showUserQuickMenu(message.username, userSpan);
       });
-      
+
       const contentSpan = document.createElement('span');
-      contentSpan.textContent = content;
-      
-      div.appendChild(timeSpan);
-      div.appendChild(userSpan);
-      div.appendChild(contentSpan);
+      contentSpan.textContent = message.content;
+
+      line.appendChild(timeSpan);
+      line.appendChild(userSpan);
+      line.appendChild(contentSpan);
+
+      if (message.edited_at) {
+        const edited = document.createElement('span');
+        edited.className = 'message-edited';
+        edited.textContent = '(bearbeitet)';
+        line.appendChild(edited);
+      }
+
+      div.appendChild(line);
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showMessageQuickMenu(message, div);
+      });
       return div;
     }
 
@@ -1356,6 +1590,115 @@
 
       requestAnimationFrame(() => menu.classList.add('show'));
       activeUserQuickMenu = menu;
+    }
+
+    function closeMessageQuickMenu() {
+      if (!activeMessageQuickMenu) return;
+      activeMessageQuickMenu.remove();
+      activeMessageQuickMenu = null;
+    }
+
+    function showMessageQuickMenu(message, anchorEl) {
+      closeMessageQuickMenu();
+
+      const menu = document.createElement('div');
+      menu.className = 'message-quick-menu';
+
+      const replyBtn = document.createElement('button');
+      replyBtn.type = 'button';
+      replyBtn.className = 'message-quick-action';
+      replyBtn.textContent = 'Antworten';
+      replyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMessageQuickMenu();
+        setReplyTarget(message);
+      });
+      menu.appendChild(replyBtn);
+
+      if (canEditMessage(message)) {
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'message-quick-action';
+        editBtn.textContent = 'Bearbeiten';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeMessageQuickMenu();
+          setEditTarget(message);
+        });
+        menu.appendChild(editBtn);
+      }
+
+      menu.addEventListener('click', (e) => e.stopPropagation());
+      document.body.appendChild(menu);
+
+      const rect = anchorEl.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const margin = 8;
+      let left = rect.left;
+      let top = rect.bottom + 6;
+
+      if (left + menuRect.width > window.innerWidth - margin) {
+        left = window.innerWidth - menuRect.width - margin;
+      }
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = rect.top - menuRect.height - 6;
+      }
+      if (left < margin) left = margin;
+      if (top < margin) top = margin;
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+
+      requestAnimationFrame(() => menu.classList.add('show'));
+      activeMessageQuickMenu = menu;
+    }
+
+    async function upsertMessageInCurrentView(message, scrollToBottom = true) {
+      if (!message) return;
+      messageLookup.set(message.id, message);
+      if (!messageBelongsToCurrentView(message)) return;
+
+      const messages = document.getElementById('messages');
+      const old = messages.querySelector(`[data-message-id="${message.id}"]`);
+      const newNode = await renderMessageWithColor(message);
+      if (old) {
+        old.replaceWith(newNode);
+      } else {
+        messages.appendChild(newNode);
+      }
+      if (scrollToBottom) {
+        messages.scrollTop = messages.scrollHeight;
+      }
+    }
+
+    async function handleIncomingMessage(message) {
+      if (!message) return;
+      const peer = getPrivatePeer(message);
+      if (peer) {
+        privateChats.add(peer);
+      }
+
+      if (messageBelongsToCurrentView(message)) {
+        await upsertMessageInCurrentView(message, true);
+        return;
+      }
+
+      if (peer && message.username !== currentUser) {
+        unreadCounts[peer] = (unreadCounts[peer] || 0) + 1;
+        updatePrivateChatsBadge();
+        const saved = localStorage.getItem('chatSession');
+        if (saved) {
+          try {
+            const obj = JSON.parse(saved);
+            obj.unreadCounts = unreadCounts;
+            obj.privateChats = Array.from(privateChats);
+            localStorage.setItem('chatSession', JSON.stringify(obj));
+          } catch (e) {
+            console.warn('Failed to save unread/private state', e);
+          }
+        }
+        showToast(`Nachricht v.: ${getDisplayUsername(peer)}`, peer);
+      }
     }
 
     function showError(msg) {
@@ -1691,15 +2034,18 @@
       const messages = document.getElementById('messages');
       // fade out, then load
       messages.classList.add('fading');
+      closeMessageQuickMenu();
+      resetComposeState();
       try {
         let url = BACKEND_URL + '/history?username=' + encodeURIComponent(currentUser);
         if (peer) url += '&peer=' + encodeURIComponent(peer);
         const res = await fetch(url);
         const data = await res.json();
         messages.innerHTML = '';
+        messageLookup = new Map();
         for (const m of data) {
-          const time = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: false});
-          const messageDiv = await renderMessageWithColor(m.username, m.content, time);
+          messageLookup.set(m.id, m);
+          const messageDiv = await renderMessageWithColor(m);
           messages.appendChild(messageDiv);
         }
         messages.scrollTop = messages.scrollHeight;
@@ -1721,6 +2067,7 @@
     document.addEventListener('click', () => {
       document.getElementById('user-menu').classList.remove('show');
       closeUserQuickMenu();
+      closeMessageQuickMenu();
     });
 
     // Close menu when clicking inside it (prevent bubbling)
@@ -1728,8 +2075,14 @@
       e.stopPropagation();
     });
 
-    document.getElementById('messages').addEventListener('scroll', closeUserQuickMenu);
-    window.addEventListener('resize', closeUserQuickMenu);
+    document.getElementById('messages').addEventListener('scroll', () => {
+      closeUserQuickMenu();
+      closeMessageQuickMenu();
+    });
+    window.addEventListener('resize', () => {
+      closeUserQuickMenu();
+      closeMessageQuickMenu();
+    });
 
     // Mode buttons
     document.getElementById('login-mode-btn').addEventListener('click', () => setMode('login'));
@@ -1860,14 +2213,38 @@
       ws = new WebSocket(url);
 
       ws.onmessage = event => {
-        const messages = document.getElementById('messages');
+        try {
+          const obj = JSON.parse(event.data);
+          if (obj.type === 'MESSAGE_NEW') {
+            handleIncomingMessage(obj.message);
+            return;
+          }
+          if (obj.type === 'MESSAGE_EDIT') {
+            const updated = obj.message;
+            if (updated) {
+              messageLookup.set(updated.id, updated);
+              if (pendingEdit && pendingEdit.id === updated.id) {
+                resetComposeState();
+              }
+              if (messageBelongsToCurrentView(updated)) {
+                upsertMessageInCurrentView(updated, false);
+              }
+              if (updated.username === currentUser) {
+                const left = getRemainingEdits(updated);
+                showToast(`Nachricht bearbeitet. Verbleibende Änderungen: ${left}`);
+              }
+            }
+            return;
+          }
+        } catch (e) {
+          // backward compatibility with old pipe format
+        }
+
         const parts = event.data.split('|');
-        
         if (parts[0] === "SYSTEM") {
           showToast(parts.slice(1).join("|"));
           return;
         }
-
         if (parts[0] === "ACCOUNT_DELETED") {
           const deletedUsername = parts.slice(1).join("|");
           if (deletedUsername) {
@@ -1878,52 +2255,6 @@
             }
             loadHistory(currentChat);
           }
-          return;
-        }
-
-        if (parts[0] === 'PUBLIC') {
-          const fullMsg = parts.slice(1).join('|');
-          // parse "time username: content"
-          const match = fullMsg.match(/^(\d{2}:\d{2}) ([^:]+): (.*)$/);
-          if (match && currentChat === null) {
-            const [, time, username, content] = match;
-            renderMessageWithColor(username, content, time).then(div => {
-              messages.appendChild(div);
-              messages.scrollTop = messages.scrollHeight;
-            });
-          }
-        } else if (parts[0] === 'PRIVATE') {
-          const sender = parts[1];
-          const fullMsg = parts.slice(2).join('|');
-          // parse "time username: content"
-          const match = fullMsg.match(/^(\d{2}:\d{2}) ([^:]+): (.*)$/);
-          if (match && currentChat === sender) {
-            const [, time, username, content] = match;
-            renderMessageWithColor(username, content, time).then(div => {
-              messages.appendChild(div);
-              messages.scrollTop = messages.scrollHeight;
-            });
-          } else {
-            // new private message for a chat we're not viewing
-            // increment unread count
-            unreadCounts[sender] = (unreadCounts[sender] || 0) + 1;
-            updatePrivateChatsBadge();
-            // persist unreadCounts
-            {
-              const saved = localStorage.getItem('chatSession');
-              if (saved) {
-                try {
-                  const obj = JSON.parse(saved);
-                  obj.unreadCounts = unreadCounts;
-                  localStorage.setItem('chatSession', JSON.stringify(obj));
-                } catch (e) {
-                  console.warn('Failed to save unreadCounts', e);
-                }
-              }
-            }
-            showToast(`Nachricht v.: ${getDisplayUsername(sender)}`, sender);
-          }
-          privateChats.add(sender);
         }
       };
 
@@ -1941,23 +2272,49 @@
 
     document.getElementById('send').addEventListener('click', () => {
       const input = document.getElementById('input');
-      if (input.value.trim() !== '') {
-        if (currentChat === null) {
-          // Public chat
-          ws.send(`PUBLIC|${input.value}`);
-        } else {
-          // Private chat
-          ws.send(`PRIVATE|${currentChat}|${input.value}`);
+      const value = input.value.trim();
+      if (!value || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+      if (pendingEdit) {
+        if (!canEditMessage(pendingEdit)) {
+          showToast(isWithinEditWindow(pendingEdit) ? 'Maximal 2 Bearbeitungen pro Nachricht erlaubt.' : 'Bearbeiten nur innerhalb von 30 Minuten m�glich.');
+          resetComposeState();
+          return;
         }
-        input.value = '';
-        input.focus();
+        ws.send(JSON.stringify({
+          type: 'EDIT',
+          message_id: pendingEdit.id,
+          content: value
+        }));
+      } else if (currentChat === null) {
+        ws.send(JSON.stringify({
+          type: 'PUBLIC',
+          content: value,
+          reply_to_id: pendingReply ? pendingReply.id : null
+        }));
+      } else {
+        ws.send(JSON.stringify({
+          type: 'PRIVATE',
+          target: currentChat,
+          content: value,
+          reply_to_id: pendingReply ? pendingReply.id : null
+        }));
       }
+
+      input.value = '';
+      resetComposeState();
+      input.focus();
     });
 
     document.getElementById('input').addEventListener('keypress', e => {
       if (e.key === 'Enter') {
         document.getElementById('send').click();
       }
+    });
+
+    document.getElementById('compose-cancel').addEventListener('click', () => {
+      resetComposeState();
+      document.getElementById('input').focus();
     });
 
     // Private Chats modal

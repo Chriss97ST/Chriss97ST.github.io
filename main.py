@@ -4,10 +4,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 import random, string
+import json
 
 
 # --- Avatar-Sys ---------------------------------------------------------
@@ -31,6 +32,7 @@ MESSAGE_COOLDOWN = 1.0        # Sekunden zwischen Nachrichten
 MAX_MESSAGE_LENGTH = 400      # maximale Zeichen
 DUPLICATE_INTERVAL = 10       # Sekunden für duplicate check
 MAX_LINKS_PER_MESSAGE = 2     # maximale Anzahl von URLs in einer Nachricht
+MAX_EDITS_PER_MESSAGE = 2
 
 last_message_time = defaultdict(float)
 last_message_content = {}
@@ -100,6 +102,9 @@ class Message(Base):
     content = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
     target_user = Column(String, nullable=True, index=True)  # None = public, username = private message
+    edited_at = Column(DateTime, nullable=True)
+    reply_to_id = Column(Integer, nullable=True, index=True)
+    edit_count = Column(Integer, default=0, nullable=False)
 
 
 class DeletedUser(Base):
@@ -111,6 +116,79 @@ class DeletedUser(Base):
 
 
 Base.metadata.create_all(bind=engine)
+
+
+def ensure_message_columns():
+    """Best-effort SQLite migration for columns added after initial deployment."""
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(messages)").fetchall()}
+        if "edited_at" not in cols:
+            conn.exec_driver_sql("ALTER TABLE messages ADD COLUMN edited_at DATETIME")
+        if "reply_to_id" not in cols:
+            conn.exec_driver_sql("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER")
+        if "edit_count" not in cols:
+            conn.exec_driver_sql("ALTER TABLE messages ADD COLUMN edit_count INTEGER NOT NULL DEFAULT 0")
+
+
+ensure_message_columns()
+
+
+def _serialize_message(msg: Message, reply_lookup: Optional[dict] = None):
+    reply = None
+    if msg.reply_to_id and reply_lookup:
+        ref = reply_lookup.get(msg.reply_to_id)
+        if ref:
+            reply = {
+                "id": ref["id"],
+                "username": ref["username"],
+                "content": ref["content"],
+            }
+    return {
+        "id": msg.id,
+        "username": msg.username,
+        "content": msg.content,
+        "timestamp": msg.timestamp.replace(tzinfo=timezone.utc).isoformat(),
+        "target_user": msg.target_user,
+        "edited_at": msg.edited_at.isoformat() if msg.edited_at else None,
+        "reply_to_id": msg.reply_to_id,
+        "edit_count": msg.edit_count or 0,
+        "remaining_edits": max(0, MAX_EDITS_PER_MESSAGE - (msg.edit_count or 0)),
+        "reply_to": reply,
+    }
+
+
+def _build_reply_lookup(db: Session, msgs: List[Message]):
+    reply_ids = sorted({m.reply_to_id for m in msgs if m.reply_to_id})
+    if not reply_ids:
+        return {}
+    refs = db.query(Message).filter(Message.id.in_(reply_ids)).all()
+    return {m.id: {"id": m.id, "username": m.username, "content": m.content} for m in refs}
+
+
+def _validate_reply_target(db: Session, username: str, target: Optional[str], reply_to_id: Optional[int]):
+    if not reply_to_id:
+        return None
+    ref = db.query(Message).filter(Message.id == reply_to_id).first()
+    if not ref:
+        return None
+    if target is None:
+        return reply_to_id if ref.target_user is None else None
+    is_participant = (
+        (ref.username == username and ref.target_user == target)
+        or (ref.username == target and ref.target_user == username)
+    )
+    return reply_to_id if is_participant else None
+
+
+def _trim_and_validate_content(content: str):
+    cleaned = (content or "").strip()
+    if not cleaned:
+        return None, "Nachricht darf nicht leer sein."
+    if len(cleaned) > MAX_MESSAGE_LENGTH:
+        return None, "Nachricht zu lang."
+    if has_too_many_links(cleaned):
+        return None, "Zu viele Links in der Nachricht."
+    return cleaned, None
 
 
 def get_db():
@@ -310,6 +388,14 @@ class ConnectionManager:
             except Exception:
                 self.disconnect(target_user)
 
+    async def send_to_users(self, users: List[str], message: str):
+        for user in set(users):
+            if user in self.active_connections:
+                try:
+                    await self.active_connections[user].send_text(message)
+                except Exception:
+                    self.disconnect(user)
+
 
 
 @app.post("/guest")
@@ -498,15 +584,8 @@ def history(username: str, peer: Optional[str] = None, db: Session = Depends(get
             .all()
         )
 
-    result = [
-        {
-            "username": m.username,
-            "content": m.content,
-            "timestamp": m.timestamp.isoformat(),
-            "target_user": m.target_user,
-        }
-        for m in msgs
-    ]
+    reply_lookup = _build_reply_lookup(db, msgs)
+    result = [_serialize_message(m, reply_lookup) for m in msgs]
     return result
 
 
@@ -556,54 +635,145 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            parts = data.split("|", 2)
-            
-            if len(parts) < 2:
-                continue
-            
-            msg_type = parts[0]
-            
-            if msg_type == "PUBLIC":
-                content = parts[1] if len(parts) > 1 else ""
+            payload = None
+            msg_type = ""
+            target = None
+            content = ""
+            reply_to_id = None
+            message_id = None
 
-                # URL Spam Filter
-                if has_too_many_links(content):
-                    await websocket.send_text("SYSTEM|Zu viele Links in der Nachricht.")
+            try:
+                obj = json.loads(data)
+                if isinstance(obj, dict):
+                    msg_type = (obj.get("type") or "").upper()
+                    target = obj.get("target")
+                    content = obj.get("content") or ""
+                    if obj.get("reply_to_id") is not None:
+                        try:
+                            reply_to_id = int(obj.get("reply_to_id"))
+                        except (TypeError, ValueError):
+                            reply_to_id = None
+                    if obj.get("message_id") is not None:
+                        try:
+                            message_id = int(obj.get("message_id"))
+                        except (TypeError, ValueError):
+                            message_id = None
+            except json.JSONDecodeError:
+                parts = data.split("|", 2)
+                if not parts:
                     continue
+                msg_type = parts[0].upper()
+                if msg_type == "PUBLIC":
+                    content = parts[1] if len(parts) > 1 else ""
+                elif msg_type == "PRIVATE":
+                    target = parts[1] if len(parts) > 1 else ""
+                    content = parts[2] if len(parts) > 2 else ""
+                elif msg_type == "EDIT":
+                    try:
+                        message_id = int(parts[1]) if len(parts) > 1 else None
+                    except (TypeError, ValueError):
+                        message_id = None
+                    content = parts[2] if len(parts) > 2 else ""
 
-                error = check_spam(username, content)
+            if msg_type == "PUBLIC":
+                cleaned, error = _trim_and_validate_content(content)
                 if error:
                     await websocket.send_text(f"SYSTEM|{error}")
                     continue
-                
+
+                spam_error = check_spam(username, cleaned)
+                if spam_error:
+                    await websocket.send_text(f"SYSTEM|{spam_error}")
+                    continue
+
                 with SessionLocal() as db:
-                    db_msg = Message(username=username, content=content, target_user=None)
+                    valid_reply_to = _validate_reply_target(db, username, None, reply_to_id)
+                    db_msg = Message(
+                        username=username,
+                        content=cleaned,
+                        target_user=None,
+                        reply_to_id=valid_reply_to,
+                    )
                     db.add(db_msg)
                     db.commit()
-                    ts = db_msg.timestamp.strftime("%H:%M")
-                await manager.broadcast(f"PUBLIC|{ts} {username}: {content}")
-            
+                    db.refresh(db_msg)
+                    reply_lookup = _build_reply_lookup(db, [db_msg])
+                    payload = _serialize_message(db_msg, reply_lookup)
+
+                await manager.broadcast(json.dumps({"type": "MESSAGE_NEW", "message": payload}))
+
             elif msg_type == "PRIVATE":
-                target = parts[1] if len(parts) > 1 else ""
-                content = parts[2] if len(parts) > 2 else ""
-
-                # URL Spam Filter
-                if has_too_many_links(content):
-                    await websocket.send_text("SYSTEM|Zu viele Links in der Nachricht.")
-                    continue
-
-                error = check_spam(username, content)
+                cleaned, error = _trim_and_validate_content(content)
                 if error:
                     await websocket.send_text(f"SYSTEM|{error}")
                     continue
-                if target:
-                    with SessionLocal() as db:
-                        db_msg = Message(username=username, content=content, target_user=target)
-                        db.add(db_msg)
-                        db.commit()
-                        ts = db_msg.timestamp.strftime("%H:%M")
-                    await manager.send_private(target, f"PRIVATE|{username}|{ts} {username}: {content}")
-                    await websocket.send_text(f"PRIVATE|{target}|{ts} du: {content}")
+
+                spam_error = check_spam(username, cleaned)
+                if spam_error:
+                    await websocket.send_text(f"SYSTEM|{spam_error}")
+                    continue
+
+                target = (target or "").strip()
+                if not target:
+                    continue
+
+                with SessionLocal() as db:
+                    valid_reply_to = _validate_reply_target(db, username, target, reply_to_id)
+                    db_msg = Message(
+                        username=username,
+                        content=cleaned,
+                        target_user=target,
+                        reply_to_id=valid_reply_to,
+                    )
+                    db.add(db_msg)
+                    db.commit()
+                    db.refresh(db_msg)
+                    reply_lookup = _build_reply_lookup(db, [db_msg])
+                    payload = _serialize_message(db_msg, reply_lookup)
+
+                await manager.send_to_users(
+                    [username, target],
+                    json.dumps({"type": "MESSAGE_NEW", "message": payload}),
+                )
+
+            elif msg_type == "EDIT":
+                cleaned, error = _trim_and_validate_content(content)
+                if error:
+                    await websocket.send_text(f"SYSTEM|{error}")
+                    continue
+                if not message_id:
+                    await websocket.send_text("SYSTEM|Ungültige Nachrichten-ID.")
+                    continue
+
+                with SessionLocal() as db:
+                    db_msg = db.query(Message).filter(Message.id == message_id).first()
+                    if not db_msg:
+                        await websocket.send_text("SYSTEM|Nachricht nicht gefunden.")
+                        continue
+                    if db_msg.username != username:
+                        await websocket.send_text("SYSTEM|Du kannst nur eigene Nachrichten bearbeiten.")
+                        continue
+                    if datetime.utcnow() - db_msg.timestamp > timedelta(minutes=30):
+                        await websocket.send_text("SYSTEM|Bearbeiten nur innerhalb von 30 Minuten möglich.")
+                        continue
+
+                    if (db_msg.edit_count or 0) >= MAX_EDITS_PER_MESSAGE:
+                        await websocket.send_text("SYSTEM|Maximal 2 Bearbeitungen pro Nachricht erlaubt.")
+                        continue
+
+                    db_msg.content = cleaned
+                    db_msg.edited_at = datetime.utcnow()
+                    db_msg.edit_count = (db_msg.edit_count or 0) + 1
+                    db.commit()
+                    db.refresh(db_msg)
+                    reply_lookup = _build_reply_lookup(db, [db_msg])
+                    payload = _serialize_message(db_msg, reply_lookup)
+
+                event = json.dumps({"type": "MESSAGE_EDIT", "message": payload})
+                if db_msg.target_user is None:
+                    await manager.broadcast(event)
+                else:
+                    await manager.send_to_users([db_msg.username, db_msg.target_user], event)
     except WebSocketDisconnect:
         manager.disconnect(username)
 
