@@ -1257,6 +1257,16 @@
       }
     }
 
+    function scrollMessagesToLatest(behavior = 'auto') {
+      const messages = document.getElementById('messages');
+      if (!messages) return;
+      if (typeof messages.scrollTo === 'function') {
+        messages.scrollTo({ top: messages.scrollHeight, behavior });
+      } else {
+        messages.scrollTop = messages.scrollHeight;
+      }
+    }
+
     function updateKeyboardInset() {
       const root = document.documentElement;
       if (!window.visualViewport) {
@@ -1266,6 +1276,9 @@
       const vv = window.visualViewport;
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       root.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
+      if (inset > 0 && document.getElementById('chat').style.display === 'flex') {
+        setTimeout(() => scrollMessagesToLatest('smooth'), 70);
+      }
     }
 
     updateKeyboardInset();
@@ -1680,6 +1693,9 @@
 
       if (messageBelongsToCurrentView(message)) {
         await upsertMessageInCurrentView(message, true);
+        if (currentChat !== null) {
+          setTimeout(() => scrollMessagesToLatest('smooth'), 20);
+        }
         return;
       }
 
@@ -2048,7 +2064,7 @@
           const messageDiv = await renderMessageWithColor(m);
           messages.appendChild(messageDiv);
         }
-        messages.scrollTop = messages.scrollHeight;
+        scrollMessagesToLatest('auto');
       } catch (e) {
         console.error('history error', e);
       }
@@ -2170,7 +2186,7 @@
     }
 
     // restore saved session if "remember me" was checked
-    (function restoreSession() {
+    (async function restoreSession() {
       const saved = localStorage.getItem('chatSession');
       if (saved) {
         try {
@@ -2179,6 +2195,13 @@
           currentToken = obj.token;
           currentUserColor = obj.color || "#ffffff";
           currentUserIsGuest = false;
+          await refreshDeletedUsers();
+          if (deletedUsers.has(currentUser)) {
+            localStorage.removeItem('chatSession');
+            currentUser = null;
+            currentToken = null;
+            return;
+          }
           updateAvatar();
           // restore private chats from localStorage
           if (obj.privateChats && Array.isArray(obj.privateChats)) {
@@ -2250,6 +2273,12 @@
           if (deletedUsername) {
             deletedUsers.add(deletedUsername);
             userColorCache[deletedUsername] = "#888888";
+            if (deletedUsername === currentUser) {
+              showToast('Dein Account wurde gelöscht. Du wurdest abgemeldet.');
+              localStorage.removeItem('chatSession');
+              document.getElementById('logout-btn').click();
+              return;
+            }
             if (currentChat === deletedUsername) {
               document.getElementById('chat-mode').textContent = `Chat mit ${getDisplayUsername(deletedUsername)}`;
             }
@@ -2310,6 +2339,11 @@
       if (e.key === 'Enter') {
         document.getElementById('send').click();
       }
+    });
+
+    document.getElementById('input').addEventListener('focus', () => {
+      setTimeout(() => scrollMessagesToLatest('smooth'), 40);
+      setTimeout(() => scrollMessagesToLatest('smooth'), 180);
     });
 
     document.getElementById('compose-cancel').addEventListener('click', () => {

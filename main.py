@@ -353,48 +353,50 @@ def get_registered_users(db: Session = Depends(get_db)):
 # reused connection manager
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: dict = {}  # {username: websocket}
+        self.active_connections: dict = {}  # {username: [websocket, ...]}
 
     async def connect(self, websocket: WebSocket, username: str):
-        # if user already has a connection, close it before replacing
-        if username in self.active_connections:
-            try:
-                await self.active_connections[username].close()
-            except Exception:
-                pass
         await websocket.accept()
-        self.active_connections[username] = websocket
+        self.active_connections.setdefault(username, []).append(websocket)
 
-    def disconnect(self, username: str):
+    def disconnect(self, username: str, websocket: Optional[WebSocket] = None):
         if username in self.active_connections:
-            del self.active_connections[username]
+            if websocket is None:
+                del self.active_connections[username]
+                return
+            remaining = [ws for ws in self.active_connections[username] if ws is not websocket]
+            if remaining:
+                self.active_connections[username] = remaining
+            else:
+                del self.active_connections[username]
 
     def get_online_users(self) -> List[str]:
-        return list(self.active_connections.keys())
+        return [u for u, sockets in self.active_connections.items() if sockets]
 
     async def broadcast(self, message: str, exclude_user: Optional[str] = None):
-        for username, connection in list(self.active_connections.items()):
+        for username, connections in list(self.active_connections.items()):
             if exclude_user and username == exclude_user:
                 continue
+            for connection in list(connections):
+                try:
+                    await connection.send_text(message)
+                except Exception:
+                    self.disconnect(username, connection)
+
+    async def send_private(self, target_user: str, message: str):
+        for connection in list(self.active_connections.get(target_user, [])):
             try:
                 await connection.send_text(message)
             except Exception:
-                self.disconnect(username)
-
-    async def send_private(self, target_user: str, message: str):
-        if target_user in self.active_connections:
-            try:
-                await self.active_connections[target_user].send_text(message)
-            except Exception:
-                self.disconnect(target_user)
+                self.disconnect(target_user, connection)
 
     async def send_to_users(self, users: List[str], message: str):
         for user in set(users):
-            if user in self.active_connections:
+            for connection in list(self.active_connections.get(user, [])):
                 try:
-                    await self.active_connections[user].send_text(message)
+                    await connection.send_text(message)
                 except Exception:
-                    self.disconnect(user)
+                    self.disconnect(user, connection)
 
 
 
@@ -547,10 +549,11 @@ async def delete_account(data: DeleteAccountSchema, db: Session = Depends(get_db
     db.commit()
 
     if username in manager.active_connections:
-        try:
-            await manager.active_connections[username].close()
-        except Exception:
-            pass
+        for connection in list(manager.active_connections.get(username, [])):
+            try:
+                await connection.close()
+            except Exception:
+                pass
         manager.disconnect(username)
 
     await manager.broadcast(f"ACCOUNT_DELETED|{username}")
@@ -627,6 +630,12 @@ async def websocket_endpoint(websocket: WebSocket):
     if not username:
         await websocket.close(code=1008)
         return
+
+    with SessionLocal() as db:
+        db_user = db.query(User).filter(User.username == username).first()
+        if not db_user:
+            await websocket.close(code=1008)
+            return
 
     await manager.connect(websocket, username)
 
@@ -775,7 +784,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 else:
                     await manager.send_to_users([db_msg.username, db_msg.target_user], event)
     except WebSocketDisconnect:
-        manager.disconnect(username)
+        manager.disconnect(username, websocket)
 
 
     # statische Dateien mounten
