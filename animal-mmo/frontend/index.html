@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Animal MMO</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
+</head>
+<body>
+<div id="ui" class="auth-screen">
+  <div class="auth-glow auth-glow-left"></div>
+  <div class="auth-glow auth-glow-right"></div>
+
+  <section class="auth-card" aria-label="Login und Registrierung">
+    <p class="kicker">3D Multiplayer</p>
+    <h1>Animal MMO</h1>
+    <p class="subtitle">Melde dich an oder erstelle einen neuen Account.</p>
+
+    <div class="auth-tabs" role="tablist" aria-label="Auth Modi">
+      <button id="tabLogin" class="auth-tab active" type="button" role="tab" aria-selected="true">Einloggen</button>
+      <button id="tabRegister" class="auth-tab" type="button" role="tab" aria-selected="false">Registrieren</button>
+    </div>
+
+    <form id="loginForm" class="auth-form active" autocomplete="on">
+      <label for="loginUser">Username</label>
+      <input id="loginUser" name="username" minlength="3" maxlength="24" required>
+
+      <label for="loginPass">Passwort</label>
+      <input id="loginPass" name="password" type="password" minlength="4" maxlength="64" required>
+
+      <label class="remember-login" for="rememberLogin">
+        <input id="rememberLogin" type="checkbox">
+        <span>Angemeldet bleiben</span>
+      </label>
+
+      <button class="primary-btn" type="submit">Spiel starten</button>
+    </form>
+
+    <form id="registerForm" class="auth-form" autocomplete="on">
+      <label for="registerUser">Username</label>
+      <input id="registerUser" name="username" minlength="3" maxlength="24" required>
+
+      <label for="registerPass">Passwort</label>
+      <input id="registerPass" name="password" type="password" minlength="4" maxlength="64" required>
+
+      <label for="registerPass2">Passwort wiederholen</label>
+      <input id="registerPass2" name="passwordRepeat" type="password" minlength="4" maxlength="64" required>
+
+      <button class="primary-btn" type="submit">Account erstellen</button>
+    </form>
+
+    <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+  </section>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="inventoryUI"></div>
+
+<div id="chatUI" class="chat-ui">
+  <div id="chatMessages" class="chat-messages"></div>
+  <input id="chatInput" class="chat-input" maxlength="180" placeholder="Nachricht eingeben und Enter druecken...">
+</div>
+
+<div id="onlineUsers" class="online-users"></div>
+
+<div id="pauseMenu">
+  <button onclick="saveGame()">Save Game</button>
+  <button onclick="resume()">Resume</button>
+</div>
+
+<div id="mobileControls" class="mobile-controls">
+  <div class="mobile-top-right">
+    <button id="touchChat" class="touch-btn touch-btn-small" type="button">Chat</button>
+    <button id="touchPause" class="touch-btn touch-btn-small" type="button">Pause</button>
+  </div>
+
+  <div class="mobile-left">
+    <button id="touchInteract" class="touch-btn" type="button">Interagieren</button>
+    <button id="touchJump" class="touch-btn touch-btn-small" type="button">Springen</button>
+    <button id="touchSprint" class="touch-btn touch-btn-small" type="button">Sprint</button>
+  </div>
+
+  <div class="mobile-right">
+    <button id="touchInventory" class="touch-btn touch-btn-small" type="button">Inventar</button>
+    <div id="touchPad" class="touch-pad">
+      <div id="touchKnob" class="touch-knob"></div>
+    </div>
+  </div>
+</div>
+
+<script src="world.js"></script>
+<script src="player.js"></script>
+<script src="multiplayer.js"></script>
+<script src="animals.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
