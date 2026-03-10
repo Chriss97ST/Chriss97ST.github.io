@@ -200,7 +200,7 @@ def get_db():
 
 # --- authentication helpers ---------------------------------------------------
 
-SECRET_KEY = "myVery_scrtKex4uD7w"  # In production, use a secure random key and keep it secret!
+SECRET_KEY = "a_very_secret_key_should_be_changed"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 
@@ -801,16 +801,6 @@ async def upload_avatar(username: str, file: UploadFile = File(...)):
     if ext not in ["png", "jpg", "jpeg", "webp"]:
         return JSONResponse({"error": "invalid file type"}, status_code=400)
 
-    for old_ext in ["png", "jpg", "jpeg", "webp"]:
-        if old_ext == ext:
-            continue
-        old_path = os.path.join(AVATAR_FOLDER, f"{username}.{old_ext}")
-        if os.path.exists(old_path):
-            try:
-                os.remove(old_path)
-            except OSError:
-                pass
-
     # absoluter Pfad zum Speichern
     filepath = os.path.join(AVATAR_FOLDER, f"{username}.{ext}")
     with open(filepath, "wb") as buffer:
@@ -827,14 +817,10 @@ async def get_user_avatar(username: str):
     AVATAR_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "avatars")
     
     # Prüfe, ob ein Avatar für genau diesen Benutzer existiert
-    candidates = []
     for ext in ["png", "jpg", "jpeg", "webp"]:
         filepath = os.path.join(AVATAR_FOLDER, f"{username}.{ext}")
         if os.path.exists(filepath):
-            candidates.append(filepath)
-    if candidates:
-        newest = max(candidates, key=os.path.getmtime)
-        return FileResponse(newest)
+            return FileResponse(filepath)
     
     # Keine Datei gefunden → Default zurückgeben
     return FileResponse(os.path.join(AVATAR_FOLDER, "default.webp"))
