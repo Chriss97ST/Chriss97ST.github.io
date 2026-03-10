@@ -1163,7 +1163,7 @@
         <img id="userAvatar" src="/chat/avatars/default.webp">
       </div> 
       <div class="user-actions"> 
-        <a href="/index.html" class="footer-btn">🏠 Home</a>
+        <a href="../index.html" class="footer-btn">🏠 Home</a>
         <button id="logout-btn">🚪logout</button>
         <button class="menu-btn" id="menu-btn">⋯ mehr</button>
       </div>
@@ -1207,10 +1207,11 @@
       <div class="top-buttons">
         <button class="top-btn" id="registered-users-btn">👤 Benutzer</button>
         <button class="top-btn" id="private-chats-btn">💬 Chats</button>
-        <div class="chat-mode-indicator" id="chat-mode">
-          <img id="chat-mode-avatar" class="chat-mode-avatar" src="/chat/avatars/default.webp" alt="Chat Avatar" />
+        <div class="chat-mode-indicator" id="chat-mode">    
           <span id="chat-mode-label">Öffentlicher Chat</span>
-        </div>      </div>
+          <img id="chat-mode-avatar" class="chat-mode-avatar" src="/chat/avatars/default.webp" alt="Chat Avatar" />
+        </div>      
+      </div>
       <div id="messages"></div>
       <div id="compose-context" class="compose-context">
         <div id="compose-context-text"></div>
@@ -1285,7 +1286,7 @@
         return;
       }
 
-      label.textContent = `Chat mit ${getDisplayUsername(peerUsername)}`;
+      label.textContent = `${getDisplayUsername(peerUsername)}`;
       avatar.src = avatarUrl(peerUsername) + `?${Date.now()}`;
       avatar.style.display = 'inline-block';
     }
@@ -2511,6 +2512,11 @@
           const userEntry = document.createElement('span');
           userEntry.className = 'user-entry';
 
+          const avatar = document.createElement('img');
+          avatar.className = 'chat-user-avatar';
+          avatar.src = avatarUrl(username) + `?${Date.now()}`;
+          avatar.alt = `Avatar von ${username}`;
+
           const statusDot = document.createElement('span');
           const isOnline = onlineUsers.has(username);
           statusDot.className = `user-status-dot ${isOnline ? 'online' : 'offline'}`;
@@ -2520,6 +2526,7 @@
           nameSpan.textContent = username;
 
           userEntry.appendChild(statusDot);
+          userEntry.appendChild(avatar);
           userEntry.appendChild(nameSpan);
           li.appendChild(userEntry);
           li.addEventListener('click', () => openPrivateChat(username));

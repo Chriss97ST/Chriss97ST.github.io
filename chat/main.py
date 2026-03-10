@@ -293,16 +293,16 @@ app.add_middleware(
 )
 
 # static and chat page
-app.mount("/static", StaticFiles(directory="."), name="static")
+app.mount("/chat/static", StaticFiles(directory="."), name="static")
 
 @app.get("/chat")
-@app.get("/")
+#@app.get("/")
 async def get_chat():
     with open("chat_index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 
-@app.post("/register")
+#@app.post("/register")
 @app.post("/chat/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == user.username).first()
@@ -318,7 +318,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"username": user.username, "color": "#ffffff"}
 
 
-@app.post("/login")
+#@app.post("/login")
 @app.post("/chat/login")
 def login(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -333,7 +333,7 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer", "username": db_user.username, "color": db_user.color}
 
 
-@app.get("/online-users")
+#@app.get("/online-users")
 @app.get("/chat/online-users")
 def get_online_users():
     """Returns list of currently online users."""
@@ -341,7 +341,7 @@ def get_online_users():
     return {"users": users}
 
 
-@app.get("/registered-users")
+#@app.get("/registered-users")
 @app.get("/chat/registered-users")
 def get_registered_users(db: Session = Depends(get_db)):
     """Returns list of all registered users (non-anonymous)."""
@@ -400,7 +400,7 @@ class ConnectionManager:
 
 
 
-@app.post("/guest")
+#@app.post("/guest")
 @app.post("/chat/guest")
 def guest(db: Session = Depends(get_db)):
     uname = random_username()
@@ -416,7 +416,7 @@ def guest(db: Session = Depends(get_db)):
 manager = ConnectionManager()
 
 
-@app.post("/register-guest")
+#@app.post("/register-guest")
 @app.post("/chat/register-guest")
 def register_guest(data: ConvertGuestSchema, db: Session = Depends(get_db)):
     """Convert an anonymous guest account to a registered account with password."""
@@ -447,7 +447,7 @@ def register_guest(data: ConvertGuestSchema, db: Session = Depends(get_db)):
     return {"username": db_user.username, "color": db_user.color}
 
 
-@app.post("/update-color")
+#@app.post("/update-color")
 @app.post("/chat/update-color")
 def update_color(data: UpdateColorSchema, db: Session = Depends(get_db)):
     """Update user's display color (registered users only)."""
@@ -471,7 +471,7 @@ def update_color(data: UpdateColorSchema, db: Session = Depends(get_db)):
 
 
 
-@app.post("/change-password")
+#@app.post("/change-password")
 @app.post("/chat/change-password")
 def change_password(data: dict, db: Session = Depends(get_db)):
     """Change password for a registered user."""
@@ -496,7 +496,7 @@ def change_password(data: dict, db: Session = Depends(get_db)):
     return {"username": db_user.username}
 
 
-@app.get("/user-color/{username}")
+#@app.get("/user-color/{username}")
 @app.get("/chat/user-color/{username}")
 def get_user_color(username: str, db: Session = Depends(get_db)):
     """Get the display color for a user."""
@@ -506,14 +506,14 @@ def get_user_color(username: str, db: Session = Depends(get_db)):
     return {"color": db_user.color}
 
 
-@app.get("/deleted-users")
+#@app.get("/deleted-users")
 @app.get("/chat/deleted-users")
 def get_deleted_users(db: Session = Depends(get_db)):
     names = db.query(DeletedUser).with_entities(DeletedUser.username).all()
     return {"users": [n.username for n in names]}
 
 
-@app.post("/delete-account")
+#@app.post("/delete-account")
 @app.post("/chat/delete-account")
 async def delete_account(data: DeleteAccountSchema, db: Session = Depends(get_db)):
     username = (data.username or "").strip()
@@ -561,7 +561,7 @@ async def delete_account(data: DeleteAccountSchema, db: Session = Depends(get_db
 
 
 
-@app.get("/history")
+#@app.get("/history")
 @app.get("/chat/history")
 def history(username: str, peer: Optional[str] = None, db: Session = Depends(get_db)):
     """Return message history.
@@ -592,7 +592,7 @@ def history(username: str, peer: Optional[str] = None, db: Session = Depends(get
     return result
 
 
-@app.get("/peers")
+#@app.get("/peers")
 @app.get("/chat/peers")
 def get_peers(username: str, db: Session = Depends(get_db)):
     """Return list of users that the given username has exchanged private messages with."""
@@ -614,7 +614,7 @@ def get_peers(username: str, db: Session = Depends(get_db)):
     return {"peers": list(names)}
 
 
-@app.websocket("/ws/chat")
+#@app.websocket("/ws/chat")
 @app.websocket("/chat/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
     # read username/token from query params
@@ -788,10 +788,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # statische Dateien mounten
-app.mount("/avatars", StaticFiles(directory=AVATAR_FOLDER), name="avatars")
+#app.mount("/avatars", StaticFiles(directory=AVATAR_FOLDER), name="avatars")
 app.mount("/chat/avatars", StaticFiles(directory=AVATAR_FOLDER), name="chat-avatars")
 
-@app.post("/upload-avatar/{username}")
+#@app.post("/upload-avatar/{username}")
 @app.post("/chat/upload-avatar/{username}")
 async def upload_avatar(username: str, file: UploadFile = File(...)):
     if not username or username == "null":
@@ -821,7 +821,7 @@ async def upload_avatar(username: str, file: UploadFile = File(...)):
     return {"success": True, "avatar": avatar_url}
 
 
-@app.get("/user-avatar/{username}")
+#@app.get("/user-avatar/{username}")
 @app.get("/chat/user-avatar/{username}")
 async def get_user_avatar(username: str):
     AVATAR_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "avatars")
