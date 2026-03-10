@@ -66,8 +66,11 @@
         }
 
         .container {
-            max-width: 700px;
-            width: 100%;
+            align-self: center;
+            align-items: center;
+            justify-content: center;
+            max-width: 800px;
+            width: 90%;
             animation: fadeIn 1.2s ease-in-out;
         }
 
@@ -84,11 +87,11 @@
         }
 
         .button-group {
-            margin-top: 40px;
+            margin: 40px auto 0;
             display: flex;
             flex-direction: column;
             gap: 24px;
-            width: 90%;
+            width: 100%;
             max-width: 420px;
         }
 
@@ -106,6 +109,7 @@
             overflow: hidden;
             transition: 0.25s ease;
             box-shadow: 0 0 12px rgba(0,0,0,0.6);
+            width: 100%;
         }
 
         .btn:hover {
@@ -140,17 +144,6 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        @media (min-width: 600px) {
-            .button-group {
-                flex-direction: row;
-                justify-content: center;
-            }
-
-            .btn {
-                width: 200px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -163,8 +156,8 @@
         <p>...auf meinem digitalen Sandkasten.</p>
         <div class="button-group">
             <a href="wtf.html" class="btn">What the F#*!</a>
-            <a href="lokation_suche/suchmaschine_index.html" class="btn">BiLFiNGER || @WORK</a>
-            <a href="chat/chat_index.html" class="btn">Chat</a>
+            <a href="suchmaschine_index.html" class="btn">BiLFiNGER || @WORK</a>
+            <a href="chat_index.html" class="btn">Chat</a>
         </div>
     </div>
 </body>
