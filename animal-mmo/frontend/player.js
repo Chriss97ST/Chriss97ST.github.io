@@ -59,6 +59,37 @@ function itemIcon(item) {
   return itemMeta[item]?.icon || "📦"
 }
 
+function createSmileyTexture() {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 128
+  const ctx = canvas.getContext("2d")
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  ctx.fillStyle = "#ffd54f"
+  ctx.beginPath()
+  ctx.arc(64, 64, 58, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.fillStyle = "#2b2b2b"
+  ctx.beginPath()
+  ctx.arc(46, 52, 9, 0, Math.PI * 2)
+  ctx.arc(82, 52, 9, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.strokeStyle = "#2b2b2b"
+  ctx.lineWidth = 10
+  ctx.lineCap = "round"
+  ctx.beginPath()
+  ctx.arc(64, 70, 26, 0.15 * Math.PI, 0.85 * Math.PI)
+  ctx.stroke()
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.needsUpdate = true
+  return texture
+}
+
 function createPlayerModel() {
   const group = new THREE.Group()
   const skin = new THREE.MeshStandardMaterial({ color: 0xffcc99, flatShading: true })
@@ -70,6 +101,15 @@ function createPlayerModel() {
 
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skin)
   head.position.y = 1.18
+
+  const faceTexture = createSmileyTexture()
+  const faceMaterial = new THREE.MeshBasicMaterial({
+    map: faceTexture,
+    transparent: true
+  })
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.58), faceMaterial)
+  face.position.z = 0.33
+  head.add(face)
 
   const armL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), skin)
   armL.position.set(-0.66, 0.14, 0)
