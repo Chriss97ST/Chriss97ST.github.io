@@ -13,10 +13,12 @@
   <div class="auth-glow auth-glow-right"></div>
 
   <section class="auth-card" aria-label="Login und Registrierung">
-    <p class="kicker">3D Multiplayer</p>
-    <h1>Animal MMO</h1>
-    <p class="subtitle">Melde dich an oder erstelle einen neuen Account.</p>
-
+    <section class="welcomeTitle">
+      <p class="kicker">3D Multiplayer</p>
+      <h1>Ani-MMO</h1>
+      <p class="subtitle">Melde dich an oder erstelle einen neuen Account.</p>
+    </section>
+    
     <div class="auth-tabs" role="tablist" aria-label="Auth Modi">
       <button id="tabLogin" class="auth-tab active" type="button" role="tab" aria-selected="true">Einloggen</button>
       <button id="tabRegister" class="auth-tab" type="button" role="tab" aria-selected="false">Registrieren</button>
@@ -27,7 +29,7 @@
       <input id="loginUser" name="username" minlength="3" maxlength="24" required>
 
       <label for="loginPass">Passwort</label>
-      <input id="loginPass" name="password" type="password" minlength="4" maxlength="64" required>
+      <input id="loginPass" name="password" type="password" minlength="6" maxlength="18" required>
 
       <label class="remember-login" for="rememberLogin">
         <input id="rememberLogin" type="checkbox">
@@ -42,11 +44,11 @@
       <input id="registerUser" name="username" minlength="3" maxlength="24" required>
 
       <label for="registerPass">Passwort</label>
-      <input id="registerPass" name="password" type="password" minlength="4" maxlength="64" required>
+      <input id="registerPass" name="password" type="password" minlength="6" maxlength="18" required>
 
       <label for="registerPass2">Passwort wiederholen</label>
-      <input id="registerPass2" name="passwordRepeat" type="password" minlength="4" maxlength="64" required>
-
+      <input id="registerPass2" name="passwordRepeat" type="password" minlength="6" maxlength="18" required>
+      
       <button class="primary-btn" type="submit">Account erstellen</button>
     </form>
 

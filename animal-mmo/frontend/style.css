@@ -33,6 +33,10 @@ body {
   overscroll-behavior: none;
 }
 
+.welcomeTitle {
+  text-align: center;
+}
+
 .auth-screen {
   position: fixed;
   inset: 0;

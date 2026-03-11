@@ -1,4 +1,4 @@
-﻿const API = "http://192.168.221.88:8000"
+﻿const API = "https://chriss97st.ddns.net/animmo/api"
 
 const ui = document.getElementById("ui")
 const game = document.getElementById("game")

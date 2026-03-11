@@ -282,7 +282,7 @@ function requestPlayerInteract() {
 
 function connectWS(id) {
   myPlayerId = Number(id)
-  ws = new WebSocket(`ws://192.168.221.88:8000/ws/${id}`)
+  ws = new WebSocket(`wss://chriss97st.ddns.net/animmo/api/ws/${id}`)
   let disconnected = false
 
   ws.onmessage = (msg) => {

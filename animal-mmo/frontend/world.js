@@ -67,7 +67,7 @@ function createTreeMesh(obj) {
     const radius = 0.45 + ring * 0.22
     fruit.position.set(
       Math.cos(angle) * radius,
-      (2.0 + ring * 0.24) * obj.scale,
+      (1.8 + ring * 0.24) * obj.scale,
       Math.sin(angle) * radius
     )
 
