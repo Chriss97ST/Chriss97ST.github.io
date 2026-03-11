@@ -544,6 +544,11 @@ input:focus {
   cursor: pointer;
 }
 
+#pauseMenu .pause-menu-logout {
+  margin-top: 18px;
+  background: #8b2f2f;
+}
+
 .mobile-controls {
   position: absolute;
   left: 0;

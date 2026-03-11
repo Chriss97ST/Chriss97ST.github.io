@@ -319,6 +319,8 @@ function connectWS(id) {
   const handleDisconnect = () => {
     if (disconnected) return
     disconnected = true
+    const intentionalLogout = Boolean(window.isLoggingOut)
+    window.isLoggingOut = false
 
     players = {}
     updateRemotePlayersSnapshot({})
@@ -337,8 +339,10 @@ function connectWS(id) {
       ui.style.display = "flex"
     }
 
-    if (typeof showAuthMessage === "function") {
+    if (!intentionalLogout && typeof showAuthMessage === "function") {
       showAuthMessage("Verbindung zum Server getrennt. Bitte erneut einloggen.", "error")
+    } else if (intentionalLogout && typeof showAuthMessage === "function") {
+      showAuthMessage("Erfolgreich ausgeloggt.", "success")
     }
   }
 

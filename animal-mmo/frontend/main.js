@@ -31,6 +31,63 @@ window.touchMove = touchMove
 window.touchSprintActive = false
 let touchPointerId = null
 let interactHoldTimer = null
+let activePlayersPinned = false
+
+function isPauseMenuOpen() {
+  return pauseMenu.style.display === "block"
+}
+
+function openPauseMenu() {
+  pauseMenu.style.display = "block"
+}
+
+function closePauseMenu() {
+  pauseMenu.style.display = "none"
+}
+
+function togglePauseMenu() {
+  if (isPauseMenuOpen()) {
+    closePauseMenu()
+    return
+  }
+
+  openPauseMenu()
+}
+
+function toggleActivePlayersPanel() {
+  activePlayersPinned = !activePlayersPinned
+  setOnlineUsersVisible(activePlayersPinned)
+}
+
+function showAuthScreen(message = "") {
+  gameActive = false
+  if (mobileControls) {
+    mobileControls.classList.remove("active")
+  }
+  game.style.display = "none"
+  ui.style.display = "flex"
+  closePauseMenu()
+  activePlayersPinned = false
+  setOnlineUsersVisible(false)
+
+  if (message) {
+    showAuthMessage(message, "success")
+  }
+}
+
+function logout() {
+  closePauseMenu()
+  clearRememberedLogin()
+  if (rememberLogin) rememberLogin.checked = false
+
+  if (typeof ws !== "undefined" && ws && ws.readyState <= WebSocket.OPEN) {
+    window.isLoggingOut = true
+    ws.close(1000, "logout")
+    return
+  }
+
+  showAuthScreen("Erfolgreich ausgeloggt.")
+}
 
 const REMEMBER_LOGIN_KEY = "animal_mmo_remember_login"
 
@@ -197,7 +254,7 @@ function setupTouchControls() {
   touchPause.addEventListener("pointerdown", (event) => {
     event.preventDefault()
     if (!gameActive) return
-    pauseMenu.style.display = "block"
+    togglePauseMenu()
   })
 }
 
@@ -374,7 +431,8 @@ document.addEventListener("keydown", (e) => {
   }
 
   if (e.key === "Escape") {
-    pauseMenu.style.display = "block"
+    e.preventDefault()
+    togglePauseMenu()
   }
 
   if (e.key === "t" || e.key === "T") {
@@ -386,7 +444,9 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("keyup", (e) => {
   if (e.key === "Tab" && gameActive) {
     e.preventDefault()
-    setOnlineUsersVisible(false)
+    if (!activePlayersPinned) {
+      setOnlineUsersVisible(false)
+    }
   }
 
   if (typeof chatInput !== "undefined" && document.activeElement === chatInput) {
@@ -460,5 +520,5 @@ if (remembered) {
 }
 
 function resume() {
-  pauseMenu.style.display = "none"
+  closePauseMenu()
 }
