@@ -3,7 +3,24 @@ import json
 import random
 import math
 import time
-from database import cur, conn, get_world_snapshot
+from database import (
+    add_inventory_item as db_add_inventory_item,
+    collect_pickup,
+    count_inventory_item as db_count_inventory_item,
+    find_world_object_by_id as db_find_world_object_by_id,
+    get_user_position,
+    get_username,
+    get_world_obstacles as db_get_world_obstacles,
+    get_world_snapshot,
+    load_inventory as db_load_inventory,
+    nearest_pickup as db_nearest_pickup,
+    nearest_tree_with_fruit as db_nearest_tree_with_fruit,
+    place_workbench_at as db_place_workbench_at,
+    remove_inventory_item as db_remove_inventory_item,
+    remove_object_and_spawn as db_remove_object_and_spawn,
+    shake_tree as db_shake_tree,
+    upsert_user_position,
+)
 
 connections = {}
 players = {}
@@ -33,70 +50,27 @@ async def broadcast(data):
 
 
 def load_user_pos(uid: int):
-    pos = cur.execute(
-        "SELECT x,y,z FROM positions WHERE user_id=?",
-        (uid,)
-    ).fetchone()
-
-    if not pos:
-        return {"x": 0, "y": 1, "z": 0}
-
-    return {"x": pos[0], "y": pos[1], "z": pos[2]}
+    return get_user_position(uid)
 
 
 def load_username(uid: int):
-    row = cur.execute(
-        "SELECT username FROM users WHERE id=?",
-        (uid,)
-    ).fetchone()
-    return row[0] if row else f"Player{uid}"
+    return get_username(uid)
 
 
 def load_inventory(uid: int):
-    rows = cur.execute(
-        "SELECT item FROM inventory WHERE user_id=?",
-        (uid,)
-    ).fetchall()
-    return [r[0] for r in rows]
+    return db_load_inventory(uid)
 
 
 def add_inventory_item(uid: int, item: str, amount: int = 1):
-    for _ in range(amount):
-        cur.execute(
-            "INSERT INTO inventory(user_id,item) VALUES(?,?)",
-            (uid, item)
-        )
-    conn.commit()
+    db_add_inventory_item(uid, item, amount)
 
 
 def remove_inventory_item(uid: int, item: str, amount: int = 1):
-    removed = 0
-
-    for _ in range(amount):
-        row = cur.execute(
-            "SELECT rowid FROM inventory WHERE user_id=? AND item=? LIMIT 1",
-            (uid, item)
-        ).fetchone()
-
-        if not row:
-            break
-
-        cur.execute(
-            "DELETE FROM inventory WHERE rowid=?",
-            (row[0],)
-        )
-        removed += 1
-
-    conn.commit()
-    return removed
+    return db_remove_inventory_item(uid, item, amount)
 
 
 def count_inventory_item(uid: int, item: str):
-    row = cur.execute(
-        "SELECT COUNT(*) FROM inventory WHERE user_id=? AND item=?",
-        (uid, item)
-    ).fetchone()
-    return row[0] if row else 0
+    return db_count_inventory_item(uid, item)
 
 
 def pickup_kind_to_item(kind: str):
@@ -170,116 +144,27 @@ ALLOWED_RECIPES = {
 
 
 def nearest_pickup(px: float, pz: float):
-    row = cur.execute(
-        """
-        SELECT id,kind,x,y,z,
-        ((x-?)*(x-?)+(z-?)*(z-?)) AS dist2
-        FROM world_pickups
-        WHERE collected=0
-        ORDER BY dist2 ASC
-        LIMIT 1
-        """,
-        (px, px, pz, pz)
-    ).fetchone()
-    return row
+    return db_nearest_pickup(px, pz)
 
 
 def nearest_tree_with_fruit(px: float, pz: float):
-    row = cur.execute(
-        """
-        SELECT id,x,y,z,fruit_count,
-        ((x-?)*(x-?)+(z-?)*(z-?)) AS dist2
-        FROM world_objects
-        WHERE kind='tree' AND fruit_count>0
-        ORDER BY dist2 ASC
-        LIMIT 1
-        """,
-        (px, px, pz, pz)
-    ).fetchone()
-    return row
+    return db_nearest_tree_with_fruit(px, pz)
 
 
 def find_world_object_by_id(obj_id: int, kind: str):
-    return cur.execute(
-        "SELECT id,x,y,z,rotation,scale,fruit_count FROM world_objects WHERE id=? AND kind=?",
-        (obj_id, kind)
-    ).fetchone()
-
-
-def spawn_pickup(kind: str, x: float, y: float, z: float):
-    cur.execute(
-        "INSERT INTO world_pickups(kind,x,y,z,collected) VALUES(?,?,?,?,0)",
-        (kind, x, y, z)
-    )
-    return {
-        "id": cur.lastrowid,
-        "kind": kind,
-        "x": x,
-        "y": y,
-        "z": z
-    }
+    return db_find_world_object_by_id(obj_id, kind)
 
 
 def shake_tree(tree_id: int, tree_x: float, tree_z: float, fruit_count: int):
-    drop_count = 1 if fruit_count == 1 else random.randint(1, min(2, fruit_count))
-    new_count = fruit_count - drop_count
-
-    cur.execute(
-        "UPDATE world_objects SET fruit_count=? WHERE id=?",
-        (new_count, tree_id)
-    )
-
-    spawned = []
-    for _ in range(drop_count):
-        ox = random.uniform(-1.2, 1.2)
-        oz = random.uniform(-1.2, 1.2)
-        spawned.append(spawn_pickup("fruit", tree_x + ox, 0.35, tree_z + oz))
-
-    conn.commit()
-    return new_count, spawned
+    return db_shake_tree(tree_id, tree_x, tree_z, fruit_count)
 
 
 def remove_object_and_spawn(kind: str, obj_id: int, drop_kind: str):
-    row = find_world_object_by_id(obj_id, kind)
-    if not row:
-        return None
-
-    _, x, y, z, _, _, _ = row
-
-    cur.execute("DELETE FROM world_objects WHERE id=?", (obj_id,))
-    spawned = [spawn_pickup(drop_kind, x, max(0.3, y), z)]
-    conn.commit()
-
-    return {
-        "id": obj_id,
-        "spawned_pickups": spawned
-    }
+    return db_remove_object_and_spawn(kind, obj_id, drop_kind)
 
 
 def place_workbench_at(px: float, pz: float, facing: float):
-    place_x = px + math.sin(facing) * 1.7
-    place_z = pz + math.cos(facing) * 1.7
-
-    place_x = max(-94, min(94, place_x))
-    place_z = max(-94, min(94, place_z))
-
-    cur.execute(
-        "INSERT INTO world_objects(kind,x,y,z,rotation,scale,fruit_count) VALUES(?,?,?,?,?,?,?)",
-        ("workbench", place_x, 0.5, place_z, facing, 1.0, 0)
-    )
-    obj_id = cur.lastrowid
-    conn.commit()
-
-    return {
-        "id": obj_id,
-        "kind": "workbench",
-        "x": place_x,
-        "y": 0.5,
-        "z": place_z,
-        "rotation": facing,
-        "scale": 1.0,
-        "fruit_count": 0
-    }
+    return db_place_workbench_at(px, pz, facing)
 
 
 def ensure_animals():
@@ -321,20 +206,7 @@ def ensure_animals():
 
 
 def get_world_obstacles():
-    rows = cur.execute(
-        "SELECT kind,x,z,scale FROM world_objects WHERE kind IN ('tree','rock','workbench')"
-    ).fetchall()
-
-    result = []
-    for kind, x, z, scale in rows:
-        if kind == "tree":
-            radius = 1.45 * scale
-        elif kind == "rock":
-            radius = 0.85 * scale
-        else:
-            radius = 0.85 * scale
-        result.append((x, z, radius))
-    return result
+    return db_get_world_obstacles()
 
 
 def update_animals_state():
@@ -570,17 +442,12 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
             if msg_type == "save":
                 data = msg["data"]
-                cur.execute(
-                    "DELETE FROM positions WHERE user_id=?",
-                    (uid,)
+                upsert_user_position(
+                    uid,
+                    float(data["x"]),
+                    float(data["y"]),
+                    float(data["z"])
                 )
-
-                cur.execute(
-                    "INSERT INTO positions VALUES(?,?,?,?)",
-                    (uid, data["x"], data["y"], data["z"])
-                )
-
-                conn.commit()
 
             if msg_type == "action_e":
                 data = msg.get("data", {})
@@ -591,14 +458,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
                 if pickup and pickup[5] <= 4:
                     pickup_id = pickup[0]
-                    pickup_kind = pickup[1]
+                    pickup_kind = collect_pickup(pickup_id)
+                    if not pickup_kind:
+                        continue
                     item = pickup_kind_to_item(pickup_kind)
-
-                    cur.execute(
-                        "UPDATE world_pickups SET collected=1 WHERE id=?",
-                        (pickup_id,)
-                    )
-                    conn.commit()
                     add_inventory_item(uid, item)
 
                     await broadcast({
@@ -616,7 +479,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 tree = nearest_tree_with_fruit(px, pz)
                 if tree and tree[5] <= 9:
                     tree_id, tx, _, tz, fruit_count, _ = tree
-                    new_count, spawned = shake_tree(tree_id, tx, tz, fruit_count)
+                    shaken = shake_tree(tree_id, tx, tz, fruit_count)
+                    if not shaken:
+                        continue
+                    new_count, spawned = shaken
 
                     await broadcast({
                         "type": "world_patch",

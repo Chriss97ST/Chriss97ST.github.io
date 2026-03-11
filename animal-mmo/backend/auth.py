@@ -1,5 +1,11 @@
 from fastapi import APIRouter
-from database import cur, conn
+from database import (
+    create_user,
+    get_user_id_by_credentials,
+    get_user_position,
+    load_inventory,
+    user_exists,
+)
 from models import AuthRequest
 
 router = APIRouter()
@@ -13,63 +19,27 @@ def register(data: AuthRequest):
     if len(username) < 3 or len(password) < 4:
         return {"status": "error", "message": "invalid_input"}
 
-    existing = cur.execute(
-        "SELECT id FROM users WHERE username=?",
-        (username,)
-    ).fetchone()
-
-    if existing:
+    if user_exists(username):
         return {"status": "error", "message": "user_exists"}
 
-    cur.execute(
-        "INSERT INTO users(username,password) VALUES(?,?)",
-        (username, password)
-    )
-
-    uid = cur.lastrowid
-
-    cur.execute(
-        "INSERT INTO positions(user_id,x,y,z) VALUES(?,?,?,?)",
-        (uid, 0, 1, 0)
-    )
-
-    conn.commit()
+    uid = create_user(username, password)
 
     return {"status": "ok", "id": uid}
 
 
 @router.post("/login")
 def login(data: AuthRequest):
-    user = cur.execute(
-        "SELECT id FROM users WHERE username=? AND password=?",
-        (data.username, data.password)
-    ).fetchone()
-
-    if not user:
+    uid = get_user_id_by_credentials(data.username, data.password)
+    if uid is None:
         return {"status": "error", "message": "invalid_credentials"}
-
-    uid = user[0]
-
-    pos = cur.execute(
-        "SELECT x,y,z FROM positions WHERE user_id=?",
-        (uid,)
-    ).fetchone()
-
-    if not pos:
-        pos = (0, 1, 0)
-
-    inv = cur.execute(
-        "SELECT item FROM inventory WHERE user_id=?",
-        (uid,)
-    ).fetchall()
-
-    inventory = [i[0] for i in inv]
+    pos = get_user_position(uid)
+    inventory = load_inventory(uid)
 
     return {
         "status": "ok",
         "id": uid,
-        "x": pos[0],
-        "y": pos[1],
-        "z": pos[2],
+        "x": pos["x"],
+        "y": pos["y"],
+        "z": pos["z"],
         "inventory": inventory
     }
