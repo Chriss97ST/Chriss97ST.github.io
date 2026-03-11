@@ -1,13 +1,20 @@
 ﻿from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
 import json
-import random
 import math
 import time
+import uuid
 from database import (
+        advance_animals_state,
+        ensure_animals_state,
+        get_animals_snapshot,
     add_inventory_item as db_add_inventory_item,
+    append_world_event,
     collect_pickup,
     count_inventory_item as db_count_inventory_item,
+    fetch_world_events_after,
     find_world_object_by_id as db_find_world_object_by_id,
+    get_latest_world_event_id,
     get_user_position,
     get_username,
     get_world_obstacles as db_get_world_obstacles,
@@ -17,17 +24,30 @@ from database import (
     nearest_tree_with_fruit as db_nearest_tree_with_fruit,
     place_workbench_at as db_place_workbench_at,
     remove_inventory_item as db_remove_inventory_item,
+    remove_live_player,
     remove_object_and_spawn as db_remove_object_and_spawn,
+    set_live_player_typing,
     shake_tree as db_shake_tree,
+    touch_live_player,
+    update_live_player_position,
     upsert_user_position,
+    upsert_live_player,
+    prune_stale_live_players,
+    get_live_players_snapshot,
 )
 
 connections = {}
 players = {}
-animals = []
-animals_initialized = False
-last_animals_update = time.monotonic()
 last_animals_broadcast = 0.0
+SERVER_ID = str(uuid.uuid4())
+PLAYER_SYNC_INTERVAL = 0.05
+ANIMAL_TICK_INTERVAL = 0.08
+EVENT_POLL_INTERVAL = 0.05
+WS_IDLE_TIMEOUT = 0.05
+_last_players_sync = 0.0
+_last_animals_tick = 0.0
+_players_sync_lock = asyncio.Lock()
+_animals_tick_lock = asyncio.Lock()
 
 
 async def send_json(ws: WebSocket, data):
@@ -47,6 +67,67 @@ async def broadcast(data):
         if connections.get(uid) is client:
             connections.pop(uid, None)
             players.pop(uid, None)
+
+
+async def sync_players_from_db(force: bool = False):
+    global _last_players_sync
+    now = time.monotonic()
+    if not force and (now - _last_players_sync) < PLAYER_SYNC_INTERVAL:
+        return
+
+    async with _players_sync_lock:
+        now = time.monotonic()
+        if not force and (now - _last_players_sync) < PLAYER_SYNC_INTERVAL:
+            return
+        _last_players_sync = now
+
+        prune_stale_live_players(12.0)
+        snapshot = get_live_players_snapshot()
+        changed = snapshot != players
+
+        if changed:
+            players.clear()
+            players.update(snapshot)
+
+        if force or changed:
+            await broadcast({
+                "type": "players",
+                "players": players
+            })
+
+
+async def tick_animals(force: bool = False):
+    global _last_animals_tick
+    now = time.monotonic()
+    if not force and (now - _last_animals_tick) < ANIMAL_TICK_INTERVAL:
+        return
+
+    async with _animals_tick_lock:
+        now = time.monotonic()
+        if not force and (now - _last_animals_tick) < ANIMAL_TICK_INTERVAL:
+            return
+        _last_animals_tick = now
+        update_animals_state()
+        await broadcast_animals(force=True)
+
+
+async def publish_instance_event(event_type: str, payload: dict):
+    append_world_event(SERVER_ID, event_type, payload)
+    await broadcast(payload)
+
+
+async def flush_instance_events(ws: WebSocket, last_event_id: int):
+    events = fetch_world_events_after(last_event_id, exclude_source_id=SERVER_ID, limit=200)
+    new_last_id = last_event_id
+
+    for event in events:
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        await send_json(ws, payload)
+        new_last_id = max(new_last_id, int(event.get("id", new_last_id)))
+
+    return new_last_id
 
 
 def load_user_pos(uid: int):
@@ -167,158 +248,16 @@ def place_workbench_at(px: float, pz: float, facing: float):
     return db_place_workbench_at(px, pz, facing)
 
 
-def ensure_animals():
-    global animals_initialized
-    if animals_initialized:
-        return
-
-    rng = random.Random(20260309)
-    animal_id = 1
-    setup = [("wolf", 4), ("hare", 8), ("fox", 6)]
-
-    for kind, count in setup:
-        for _ in range(count):
-            dx = rng.uniform(-1, 1)
-            dz = rng.uniform(-1, 1)
-            norm = math.hypot(dx, dz) or 1
-            dx /= norm
-            dz /= norm
-
-            base_speed = 0.075 if kind == "hare" else 0.058 if kind == "wolf" else 0.048
-
-            animals.append({
-                "id": animal_id,
-                "type": kind,
-                "x": rng.uniform(-45, 45),
-                "y": 0.0,
-                "z": rng.uniform(-45, 45),
-                "dir_x": dx,
-                "dir_z": dz,
-                "base_speed": base_speed,
-                "speed": base_speed,
-                "decision_timer": rng.uniform(1.5, 4.0),
-                "chase_elapsed": 0.0,
-                "interest_cooldown": 0.0
-            })
-            animal_id += 1
-
-    animals_initialized = True
-
-
 def get_world_obstacles():
     return db_get_world_obstacles()
 
 
 def update_animals_state():
-    global last_animals_update
-    ensure_animals()
-
-    now = time.monotonic()
-    dt = max(0.001, min(0.06, now - last_animals_update))
-    last_animals_update = now
-
-    obstacles = get_world_obstacles()
-    player_points = [(p["x"], p["z"]) for p in players.values()]
-
-    for animal in animals:
-        animal["decision_timer"] -= dt
-        animal["interest_cooldown"] = max(0.0, animal["interest_cooldown"] - dt)
-
-        px = pz = None
-        nearest_d2 = 10_000.0
-        for x, z in player_points:
-            d2 = (x - animal["x"]) ** 2 + (z - animal["z"]) ** 2
-            if d2 < nearest_d2:
-                nearest_d2 = d2
-                px, pz = x, z
-
-        speed_mul = 1.0
-        target_dx = animal["dir_x"]
-        target_dz = animal["dir_z"]
-
-        if px is not None:
-            to_px = px - animal["x"]
-            to_pz = pz - animal["z"]
-            dist = math.hypot(to_px, to_pz)
-
-            if animal["type"] == "hare" and dist < 14:
-                inv = 1 / (dist or 1)
-                target_dx = -to_px * inv
-                target_dz = -to_pz * inv
-                speed_mul = 2.5
-                animal["decision_timer"] = 0.8
-                animal["chase_elapsed"] = 0.0
-            elif animal["type"] == "wolf" and animal["interest_cooldown"] <= 0 and dist < 18:
-                inv = 1 / (dist or 1)
-                target_dx = to_px * inv
-                target_dz = to_pz * inv
-                speed_mul = 2.05
-                animal["decision_timer"] = 0.6
-                animal["chase_elapsed"] += dt
-                if animal["chase_elapsed"] > 7:
-                    animal["interest_cooldown"] = 9
-                    animal["chase_elapsed"] = 0.0
-                    animal["decision_timer"] = 0
-            elif animal["type"] == "fox" and dist < 9:
-                inv = 1 / (dist or 1)
-                target_dx = -to_px * inv
-                target_dz = -to_pz * inv
-                speed_mul = 1.9
-                animal["decision_timer"] = 0.9
-                animal["chase_elapsed"] = 0.0
-
-        if animal["decision_timer"] <= 0:
-            rx = random.uniform(-1, 1)
-            rz = random.uniform(-1, 1)
-            norm = math.hypot(rx, rz) or 1
-            target_dx = rx / norm
-            target_dz = rz / norm
-            animal["decision_timer"] = random.uniform(2.0, 5.0)
-            animal["chase_elapsed"] = 0.0
-
-        steer = 0.08
-        animal["dir_x"] = animal["dir_x"] * (1 - steer) + target_dx * steer
-        animal["dir_z"] = animal["dir_z"] * (1 - steer) + target_dz * steer
-        dir_norm = math.hypot(animal["dir_x"], animal["dir_z"]) or 1
-        animal["dir_x"] /= dir_norm
-        animal["dir_z"] /= dir_norm
-
-        animal["speed"] = animal["base_speed"] * speed_mul
-        step = animal["speed"] * (dt * 60)
-        nx = animal["x"] + animal["dir_x"] * step
-        nz = animal["z"] + animal["dir_z"] * step
-
-        own_radius = 0.52 if animal["type"] == "hare" else 0.65
-        for ox, oz, radius in obstacles:
-            dx = nx - ox
-            dz = nz - oz
-            dist = math.hypot(dx, dz) or 0.0001
-            min_dist = own_radius + radius
-            if dist < min_dist:
-                push = min_dist - dist
-                nx += (dx / dist) * push
-                nz += (dz / dist) * push
-
-        if nx > 95 or nx < -95:
-            animal["dir_x"] *= -1
-        if nz > 95 or nz < -95:
-            animal["dir_z"] *= -1
-
-        animal["x"] = max(-95, min(95, nx))
-        animal["z"] = max(-95, min(95, nz))
+    advance_animals_state()
 
 
 def serialize_animals():
-    return [{
-        "id": a["id"],
-        "type": a["type"],
-        "x": a["x"],
-        "y": a["y"],
-        "z": a["z"],
-        "dir_x": a["dir_x"],
-        "dir_z": a["dir_z"],
-        "speed": a["speed"]
-    } for a in animals]
+    return get_animals_snapshot()
 
 
 async def broadcast_animals(force: bool = False):
@@ -335,17 +274,15 @@ async def broadcast_animals(force: bool = False):
 
 async def websocket_endpoint(ws: WebSocket, uid: int):
     await ws.accept()
-    ensure_animals()
+    ensure_animals_state()
+    session_id = str(uuid.uuid4())
+    last_seen_event_id = get_latest_world_event_id()
 
     connections[uid] = ws
     pos = load_user_pos(uid)
-    players[uid] = {
-        "x": pos["x"],
-        "y": pos["y"],
-        "z": pos["z"],
-        "name": load_username(uid),
-        "typing": False
-    }
+    name = load_username(uid)
+    upsert_live_player(uid, session_id, name, pos["x"], pos["y"], pos["z"], False)
+    last_event_poll = 0.0
 
     await send_json(ws, {
         "type": "world_snapshot",
@@ -353,48 +290,48 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
         "animals": serialize_animals()
     })
 
-    await broadcast({
-        "type": "players",
-        "players": players
-    })
+    await sync_players_from_db(force=True)
+    await tick_animals(force=True)
 
     try:
         while True:
-            msg = json.loads(await ws.receive_text())
+            try:
+                msg_text = await asyncio.wait_for(ws.receive_text(), timeout=WS_IDLE_TIMEOUT)
+            except asyncio.TimeoutError:
+                touch_live_player(uid, session_id)
+                await sync_players_from_db()
+                await tick_animals()
+                now = time.monotonic()
+                if now - last_event_poll >= EVENT_POLL_INTERVAL:
+                    last_event_poll = now
+                    last_seen_event_id = await flush_instance_events(ws, last_seen_event_id)
+                continue
+            except WebSocketDisconnect:
+                break
+            except RuntimeError:
+                # Starlette can raise RuntimeError after disconnect during timed receive/cancel windows.
+                break
+
+            msg = json.loads(msg_text)
             msg_type = msg.get("type")
-            update_animals_state()
-            await broadcast_animals()
+            await sync_players_from_db()
+            await tick_animals()
+            now = time.monotonic()
+            if now - last_event_poll >= EVENT_POLL_INTERVAL:
+                last_event_poll = now
+                last_seen_event_id = await flush_instance_events(ws, last_seen_event_id)
 
             if msg_type == "position":
-                current = players.get(uid, {"name": load_username(uid)})
-                players[uid] = {
-                    "x": float(msg["data"]["x"]),
-                    "y": float(msg["data"]["y"]),
-                    "z": float(msg["data"]["z"]),
-                    "name": current.get("name", load_username(uid)),
-                    "typing": bool(current.get("typing", False))
-                }
-                await broadcast({
-                    "type": "players",
-                    "players": players
-                })
-                await broadcast_animals(force=True)
+                x = float(msg["data"]["x"])
+                y = float(msg["data"]["y"])
+                z = float(msg["data"]["z"])
+                update_live_player_position(uid, session_id, x, y, z)
+                touch_live_player(uid, session_id)
 
             if msg_type == "typing":
                 active = bool(msg.get("active", False))
-                current = players.get(uid)
-                if not current:
-                    continue
-
-                if bool(current.get("typing", False)) == active:
-                    continue
-
-                current["typing"] = active
-
-                await broadcast({
-                    "type": "players",
-                    "players": players
-                })
+                set_live_player_typing(uid, session_id, active)
+                await sync_players_from_db(force=True)
 
             if msg_type == "chat":
                 text = str(msg.get("text", "")).strip()
@@ -404,7 +341,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 text = text[:180]
                 sender = players.get(uid, {"name": load_username(uid)})
 
-                await broadcast({
+                await publish_instance_event("chat", {
                     "type": "chat",
                     "uid": uid,
                     "name": sender.get("name", f"Player{uid}"),
@@ -412,6 +349,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 })
 
             if msg_type == "player_interact":
+                await sync_players_from_db()
                 data = msg.get("data", {})
                 px = float(data.get("x", 0))
                 pz = float(data.get("z", 0))
@@ -433,7 +371,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     source_name = players.get(uid, {}).get("name", f"Player{uid}")
                     target_name = players.get(nearest_uid, {}).get("name", f"Player{nearest_uid}")
 
-                    await broadcast({
+                    await publish_instance_event("chat", {
                         "type": "chat",
                         "uid": 0,
                         "name": "System",
@@ -464,7 +402,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     item = pickup_kind_to_item(pickup_kind)
                     add_inventory_item(uid, item)
 
-                    await broadcast({
+                    await publish_instance_event("world_patch", {
                         "type": "world_patch",
                         "event": "pickup_collected",
                         "pickup_id": pickup_id
@@ -484,7 +422,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         continue
                     new_count, spawned = shaken
 
-                    await broadcast({
+                    await publish_instance_event("world_patch", {
                         "type": "world_patch",
                         "event": "tree_shaken",
                         "tree_id": tree_id,
@@ -511,7 +449,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 if not chopped:
                     continue
 
-                await broadcast({
+                await publish_instance_event("world_patch", {
                     "type": "world_patch",
                     "event": "object_removed",
                     "object_kind": "tree",
@@ -538,7 +476,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 if not mined:
                     continue
 
-                await broadcast({
+                await publish_instance_event("world_patch", {
                     "type": "world_patch",
                     "event": "object_removed",
                     "object_kind": "rock",
@@ -557,7 +495,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
                 placed = place_workbench_at(px, pz, facing)
 
-                await broadcast({
+                await publish_instance_event("world_patch", {
                     "type": "world_patch",
                     "event": "workbench_added",
                     "object": placed
@@ -597,11 +535,19 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         "inventory": load_inventory(uid)
                     })
 
+            touch_live_player(uid, session_id)
+            now = time.monotonic()
+            if now - last_event_poll >= EVENT_POLL_INTERVAL:
+                last_event_poll = now
+                last_seen_event_id = await flush_instance_events(ws, last_seen_event_id)
+
     except WebSocketDisconnect:
+        pass
+    except RuntimeError:
+        # Treat runtime websocket state errors like disconnects.
+        pass
+    finally:
+        remove_live_player(uid, session_id)
         if connections.get(uid) is ws:
             connections.pop(uid, None)
-            players.pop(uid, None)
-        await broadcast({
-            "type": "players",
-            "players": players
-        })
+        await sync_players_from_db(force=True)

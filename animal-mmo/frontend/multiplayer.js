@@ -13,6 +13,12 @@ let chatVisibleTimeout = null
 let chatInputActive = false
 let typingPulse = 0
 let lastPlayerInteractSent = 0
+let lastPosSentAt = 0
+let lastKeepAliveSentAt = 0
+const lastSentPos = { x: 0, y: 0, z: 0 }
+const POS_SEND_INTERVAL_MS = 50
+const POS_KEEPALIVE_MS = 450
+const POS_MIN_DIST2 = 0.0009
 
 function createNameTag(text) {
   const canvas = document.createElement("canvas")
@@ -63,10 +69,12 @@ function createRemotePlayer(name) {
   return {
     mesh: group,
     target: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
     moving: false,
     nameTag,
     typingTag,
-    typing: false
+    typing: false,
+    lastServerUpdateMs: performance.now()
   }
 }
 
@@ -128,6 +136,7 @@ function sendTypingStatus(active) {
 }
 
 function updateRemotePlayersSnapshot(snapshot) {
+  const now = performance.now()
   const seen = new Set()
 
   for (const [uidRaw, info] of Object.entries(snapshot || {})) {
@@ -140,10 +149,18 @@ function updateRemotePlayersSnapshot(snapshot) {
     if (!entry) {
       entry = createRemotePlayer(info.name || `Player${uid}`)
       entry.mesh.position.set(info.x || 0, info.y || 1, info.z || 0)
+      entry.target.copy(entry.mesh.position)
       remotePlayers.set(uid, entry)
+    } else {
+      const dt = Math.max(0.016, (now - entry.lastServerUpdateMs) / 1000)
+      const vx = (Number(info.x || 0) - entry.target.x) / dt
+      const vy = (Number(info.y || 1) - entry.target.y) / dt
+      const vz = (Number(info.z || 0) - entry.target.z) / dt
+      entry.velocity.set(vx, vy, vz)
     }
 
     entry.target.set(info.x || 0, info.y || 1, info.z || 0)
+    entry.lastServerUpdateMs = now
     entry.typing = Boolean(info.typing)
     entry.typingTag.visible = entry.typing
   }
@@ -161,16 +178,21 @@ function updateRemotePlayers(delta) {
   typingPulse += delta * 3.4
   const dotPhase = Math.floor(typingPulse % 3) + 1
   const dots = ".".repeat(dotPhase)
+  const now = performance.now()
 
   for (const entry of remotePlayers.values()) {
+    const ageSeconds = Math.max(0, (now - entry.lastServerUpdateMs) / 1000)
+    const extrapolation = Math.min(0.12, ageSeconds)
+    const predicted = entry.target.clone().addScaledVector(entry.velocity, extrapolation)
+
     const before = entry.mesh.position.clone()
-    entry.mesh.position.lerp(entry.target, Math.min(1, delta * 12))
+    entry.mesh.position.lerp(predicted, Math.min(1, delta * 16))
 
     const moveDist = entry.mesh.position.distanceTo(before)
     entry.moving = moveDist > 0.002
 
-    const dx = entry.target.x - entry.mesh.position.x
-    const dz = entry.target.z - entry.mesh.position.z
+    const dx = predicted.x - entry.mesh.position.x
+    const dz = predicted.z - entry.mesh.position.z
     if (Math.abs(dx) + Math.abs(dz) > 0.01) {
       entry.mesh.rotation.y = Math.atan2(dx, dz)
     }
@@ -282,6 +304,13 @@ function requestPlayerInteract() {
 
 function connectWS(id) {
   myPlayerId = Number(id)
+  lastPosSentAt = 0
+  lastKeepAliveSentAt = 0
+  if (typeof player !== "undefined" && player) {
+    lastSentPos.x = player.position.x
+    lastSentPos.y = player.position.y
+    lastSentPos.z = player.position.z
+  }
   ws = new WebSocket(`wss://chriss97st.ddns.net/animmo/api/ws/${id}`)
   let disconnected = false
 
@@ -353,14 +382,38 @@ function connectWS(id) {
 function sendPos() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
 
+  const now = performance.now()
+  const x = player.position.x
+  const y = player.position.y
+  const z = player.position.z
+
+  const dx = x - lastSentPos.x
+  const dy = y - lastSentPos.y
+  const dz = z - lastSentPos.z
+  const dist2 = dx * dx + dy * dy + dz * dz
+
+  const dueByInterval = now - lastPosSentAt >= POS_SEND_INTERVAL_MS
+  const movedEnough = dist2 >= POS_MIN_DIST2
+  const keepAliveDue = now - lastKeepAliveSentAt >= POS_KEEPALIVE_MS
+
+  if (!(keepAliveDue || (dueByInterval && movedEnough))) {
+    return
+  }
+
   ws.send(JSON.stringify({
     type: "position",
     data: {
-      x: player.position.x,
-      y: player.position.y,
-      z: player.position.z
+      x,
+      y,
+      z
     }
   }))
+
+  lastPosSentAt = now
+  lastKeepAliveSentAt = now
+  lastSentPos.x = x
+  lastSentPos.y = y
+  lastSentPos.z = z
 }
 
 function requestActionE() {

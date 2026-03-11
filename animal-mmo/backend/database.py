@@ -3,6 +3,8 @@ import sqlite3
 import threading
 import math
 import secrets
+import time
+import json
 from pathlib import Path
 
 
@@ -65,6 +67,23 @@ with state_lock:
         )
         """
     )
+    state_conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS live_players(
+            user_id INTEGER PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            z REAL NOT NULL,
+            typing INTEGER DEFAULT 0,
+            last_seen REAL NOT NULL
+        )
+        """
+    )
+    state_conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_live_players_last_seen ON live_players(last_seen)"
+    )
     state_conn.commit()
 
 with inventory_lock:
@@ -116,6 +135,38 @@ with world_lock:
             collected INTEGER DEFAULT 0
         )
         """
+    )
+    world_conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS world_events(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            created_at REAL NOT NULL
+        )
+        """
+    )
+    world_conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS world_animals(
+            id INTEGER PRIMARY KEY,
+            type TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            z REAL NOT NULL,
+            dir_x REAL NOT NULL,
+            dir_z REAL NOT NULL,
+            base_speed REAL NOT NULL,
+            speed REAL NOT NULL,
+            decision_timer REAL NOT NULL,
+            chase_elapsed REAL NOT NULL,
+            interest_cooldown REAL NOT NULL
+        )
+        """
+    )
+    world_conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_world_events_id ON world_events(id)"
     )
     world_conn.commit()
 
@@ -206,6 +257,315 @@ def get_world_snapshot():
     return {"objects": objects, "pickups": pickups}
 
 
+def ensure_animals_state():
+    with world_lock:
+        count = world_conn.execute("SELECT COUNT(*) AS cnt FROM world_animals").fetchone()["cnt"]
+        if count > 0:
+            row = world_conn.execute(
+                "SELECT value FROM world_meta WHERE key='animals_last_update'"
+            ).fetchone()
+            if not row:
+                world_conn.execute(
+                    "INSERT OR REPLACE INTO world_meta(key,value) VALUES('animals_last_update',?)",
+                    (str(time.time()),)
+                )
+                world_conn.commit()
+            return
+
+        seed = _get_or_create_world_seed() + 1001
+        rng = random.Random(seed)
+        animal_id = 1
+        setup = [("wolf", 4), ("hare", 8), ("fox", 6)]
+
+        for kind, amount in setup:
+            for _ in range(amount):
+                dx = rng.uniform(-1, 1)
+                dz = rng.uniform(-1, 1)
+                norm = math.hypot(dx, dz) or 1
+                dx /= norm
+                dz /= norm
+
+                base_speed = 0.075 if kind == "hare" else 0.058 if kind == "wolf" else 0.048
+
+                world_conn.execute(
+                    """
+                    INSERT INTO world_animals(
+                        id,type,x,y,z,dir_x,dir_z,base_speed,speed,
+                        decision_timer,chase_elapsed,interest_cooldown
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        animal_id,
+                        kind,
+                        rng.uniform(-45, 45),
+                        0.0,
+                        rng.uniform(-45, 45),
+                        dx,
+                        dz,
+                        base_speed,
+                        base_speed,
+                        rng.uniform(1.5, 4.0),
+                        0.0,
+                        0.0,
+                    )
+                )
+                animal_id += 1
+
+        world_conn.execute(
+            "INSERT OR REPLACE INTO world_meta(key,value) VALUES('animals_last_update',?)",
+            (str(time.time()),)
+        )
+        world_conn.commit()
+
+
+def get_animals_snapshot():
+    with world_lock:
+        rows = world_conn.execute(
+            "SELECT id,type,x,y,z,dir_x,dir_z,speed FROM world_animals ORDER BY id"
+        ).fetchall()
+
+    return [
+        {
+            "id": int(r["id"]),
+            "type": r["type"],
+            "x": r["x"],
+            "y": r["y"],
+            "z": r["z"],
+            "dir_x": r["dir_x"],
+            "dir_z": r["dir_z"],
+            "speed": r["speed"],
+        }
+        for r in rows
+    ]
+
+
+def advance_animals_state(max_dt: float = 0.06):
+    ensure_animals_state()
+
+    with state_lock:
+        player_rows = state_conn.execute("SELECT x,z FROM live_players").fetchall()
+    player_points = [(r["x"], r["z"]) for r in player_rows]
+
+    with world_lock:
+        world_conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = world_conn.execute(
+                "SELECT value FROM world_meta WHERE key='animals_last_update'"
+            ).fetchone()
+            now = time.monotonic()
+            prev = float(row["value"]) if row else now
+            dt = max(0.001, min(max_dt, now - prev))
+
+            obstacles_rows = world_conn.execute(
+                "SELECT kind,x,z,scale FROM world_objects WHERE kind IN ('tree','rock','workbench')"
+            ).fetchall()
+            obstacles = []
+            for o in obstacles_rows:
+                kind = o["kind"]
+                scale = o["scale"]
+                radius = 1.45 * scale if kind == "tree" else 0.85 * scale
+                obstacles.append((o["x"], o["z"], radius))
+
+            rows = world_conn.execute(
+                """
+                SELECT id,type,x,y,z,dir_x,dir_z,base_speed,speed,
+                       decision_timer,chase_elapsed,interest_cooldown
+                FROM world_animals
+                ORDER BY id
+                """
+            ).fetchall()
+
+            for a in rows:
+                ax = a["x"]
+                az = a["z"]
+                dir_x = a["dir_x"]
+                dir_z = a["dir_z"]
+                decision_timer = a["decision_timer"] - dt
+                chase_elapsed = a["chase_elapsed"]
+                interest_cooldown = max(0.0, a["interest_cooldown"] - dt)
+
+                px = pz = None
+                nearest_d2 = 10_000.0
+                for x, z in player_points:
+                    d2 = (x - ax) ** 2 + (z - az) ** 2
+                    if d2 < nearest_d2:
+                        nearest_d2 = d2
+                        px, pz = x, z
+
+                speed_mul = 1.0
+                target_dx = dir_x
+                target_dz = dir_z
+
+                if px is not None:
+                    to_px = px - ax
+                    to_pz = pz - az
+                    dist = math.hypot(to_px, to_pz)
+
+                    if a["type"] == "hare" and dist < 14:
+                        inv = 1 / (dist or 1)
+                        target_dx = -to_px * inv
+                        target_dz = -to_pz * inv
+                        speed_mul = 2.5
+                        decision_timer = 0.8
+                        chase_elapsed = 0.0
+                    elif a["type"] == "wolf" and interest_cooldown <= 0 and dist < 18:
+                        inv = 1 / (dist or 1)
+                        target_dx = to_px * inv
+                        target_dz = to_pz * inv
+                        speed_mul = 2.05
+                        decision_timer = 0.6
+                        chase_elapsed += dt
+                        if chase_elapsed > 7:
+                            interest_cooldown = 9
+                            chase_elapsed = 0.0
+                            decision_timer = 0
+                    elif a["type"] == "fox" and dist < 9:
+                        inv = 1 / (dist or 1)
+                        target_dx = -to_px * inv
+                        target_dz = -to_pz * inv
+                        speed_mul = 1.9
+                        decision_timer = 0.9
+                        chase_elapsed = 0.0
+
+                if decision_timer <= 0:
+                    rx = random.uniform(-1, 1)
+                    rz = random.uniform(-1, 1)
+                    norm = math.hypot(rx, rz) or 1
+                    target_dx = rx / norm
+                    target_dz = rz / norm
+                    decision_timer = random.uniform(2.0, 5.0)
+                    chase_elapsed = 0.0
+
+                steer = 0.08
+                dir_x = dir_x * (1 - steer) + target_dx * steer
+                dir_z = dir_z * (1 - steer) + target_dz * steer
+                dir_norm = math.hypot(dir_x, dir_z) or 1
+                dir_x /= dir_norm
+                dir_z /= dir_norm
+
+                speed = a["base_speed"] * speed_mul
+                step = speed * (dt * 60)
+                nx = ax + dir_x * step
+                nz = az + dir_z * step
+
+                own_radius = 0.52 if a["type"] == "hare" else 0.65
+                for ox, oz, radius in obstacles:
+                    dx = nx - ox
+                    dz = nz - oz
+                    dist = math.hypot(dx, dz) or 0.0001
+                    min_dist = own_radius + radius
+                    if dist < min_dist:
+                        push = min_dist - dist
+                        nx += (dx / dist) * push
+                        nz += (dz / dist) * push
+
+                if nx > 95 or nx < -95:
+                    dir_x *= -1
+                if nz > 95 or nz < -95:
+                    dir_z *= -1
+
+                nx = max(-95, min(95, nx))
+                nz = max(-95, min(95, nz))
+
+                world_conn.execute(
+                    """
+                    UPDATE world_animals
+                    SET x=?, z=?, dir_x=?, dir_z=?, speed=?,
+                        decision_timer=?, chase_elapsed=?, interest_cooldown=?
+                    WHERE id=?
+                    """,
+                    (
+                        nx,
+                        nz,
+                        dir_x,
+                        dir_z,
+                        speed,
+                        decision_timer,
+                        chase_elapsed,
+                        interest_cooldown,
+                        int(a["id"]),
+                    ),
+                )
+
+            world_conn.execute(
+                "INSERT OR REPLACE INTO world_meta(key,value) VALUES('animals_last_update',?)",
+                (str(now),)
+            )
+            world_conn.commit()
+        except Exception:
+            world_conn.rollback()
+            raise
+
+
+def get_latest_world_event_id():
+    with world_lock:
+        row = world_conn.execute("SELECT MAX(id) AS max_id FROM world_events").fetchone()
+    if not row or row["max_id"] is None:
+        return 0
+    return int(row["max_id"])
+
+
+def append_world_event(source_id: str, event_type: str, payload: dict):
+    now = time.time()
+    payload_json = json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+    with world_lock:
+        cur = world_conn.execute(
+            "INSERT INTO world_events(source_id,event_type,payload_json,created_at) VALUES(?,?,?,?)",
+            (source_id, event_type, payload_json, now)
+        )
+
+        # Keep the event log bounded; enough history for reconnects and cross-instance fanout.
+        world_conn.execute(
+            "DELETE FROM world_events WHERE id < ?",
+            (max(0, cur.lastrowid - 5000),)
+        )
+        world_conn.commit()
+        return int(cur.lastrowid)
+
+
+def fetch_world_events_after(last_event_id: int, exclude_source_id: str = "", limit: int = 200):
+    with world_lock:
+        if exclude_source_id:
+            rows = world_conn.execute(
+                """
+                SELECT id,source_id,event_type,payload_json
+                FROM world_events
+                WHERE id > ? AND source_id <> ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (last_event_id, exclude_source_id, limit)
+            ).fetchall()
+        else:
+            rows = world_conn.execute(
+                """
+                SELECT id,source_id,event_type,payload_json
+                FROM world_events
+                WHERE id > ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (last_event_id, limit)
+            ).fetchall()
+
+    events = []
+    for row in rows:
+        try:
+            payload = json.loads(row["payload_json"])
+        except Exception:
+            continue
+
+        events.append({
+            "id": int(row["id"]),
+            "source_id": row["source_id"],
+            "event_type": row["event_type"],
+            "payload": payload
+        })
+
+    return events
+
+
 def user_exists(username: str):
     with users_lock:
         row = users_conn.execute(
@@ -267,6 +627,110 @@ def upsert_user_position(uid: int, x: float, y: float, z: float):
             (uid, x, y, z)
         )
         state_conn.commit()
+
+
+def upsert_live_player(
+    uid: int,
+    session_id: str,
+    name: str,
+    x: float,
+    y: float,
+    z: float,
+    typing: bool = False
+):
+    now = time.time()
+    with state_lock:
+        state_conn.execute(
+            """
+            INSERT INTO live_players(user_id,session_id,name,x,y,z,typing,last_seen)
+            VALUES(?,?,?,?,?,?,?,?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                session_id=excluded.session_id,
+                name=excluded.name,
+                x=excluded.x,
+                y=excluded.y,
+                z=excluded.z,
+                typing=excluded.typing,
+                last_seen=excluded.last_seen
+            """,
+            (uid, session_id, name, x, y, z, 1 if typing else 0, now)
+        )
+        state_conn.commit()
+
+
+def update_live_player_position(uid: int, session_id: str, x: float, y: float, z: float):
+    now = time.time()
+    with state_lock:
+        state_conn.execute(
+            """
+            UPDATE live_players
+            SET x=?, y=?, z=?, last_seen=?
+            WHERE user_id=? AND session_id=?
+            """,
+            (x, y, z, now, uid, session_id)
+        )
+        state_conn.commit()
+
+
+def set_live_player_typing(uid: int, session_id: str, active: bool):
+    now = time.time()
+    with state_lock:
+        state_conn.execute(
+            """
+            UPDATE live_players
+            SET typing=?, last_seen=?
+            WHERE user_id=? AND session_id=?
+            """,
+            (1 if active else 0, now, uid, session_id)
+        )
+        state_conn.commit()
+
+
+def touch_live_player(uid: int, session_id: str):
+    now = time.time()
+    with state_lock:
+        state_conn.execute(
+            "UPDATE live_players SET last_seen=? WHERE user_id=? AND session_id=?",
+            (now, uid, session_id)
+        )
+        state_conn.commit()
+
+
+def remove_live_player(uid: int, session_id: str):
+    with state_lock:
+        state_conn.execute(
+            "DELETE FROM live_players WHERE user_id=? AND session_id=?",
+            (uid, session_id)
+        )
+        state_conn.commit()
+
+
+def prune_stale_live_players(max_age_seconds: float = 12.0):
+    threshold = time.time() - max_age_seconds
+    with state_lock:
+        state_conn.execute(
+            "DELETE FROM live_players WHERE last_seen < ?",
+            (threshold,)
+        )
+        state_conn.commit()
+
+
+def get_live_players_snapshot():
+    with state_lock:
+        rows = state_conn.execute(
+            "SELECT user_id,name,x,y,z,typing FROM live_players"
+        ).fetchall()
+
+    snapshot = {}
+    for row in rows:
+        snapshot[int(row["user_id"])] = {
+            "x": row["x"],
+            "y": row["y"],
+            "z": row["z"],
+            "name": row["name"],
+            "typing": bool(row["typing"])
+        }
+    return snapshot
 
 
 def load_inventory(uid: int):
