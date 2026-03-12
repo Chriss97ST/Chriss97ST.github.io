@@ -10,6 +10,8 @@ let workbenchCraftOpen = false
 let workbenchIgnoreOutsideClickUntil = 0
 let openChestId = 0
 let openChestItems = []
+let chestIgnoreOutsideClickUntil = 0
+let draggedInventoryItem = ""
 const craftSlots2x2 = Array(4).fill(null)
 const craftSlots3x3 = Array(9).fill(null)
 let equippedItem = ""
@@ -558,6 +560,8 @@ function closeWorkbenchAndInventory() {
   workbenchIgnoreOutsideClickUntil = 0
   openChestId = 0
   openChestItems = []
+  chestIgnoreOutsideClickUntil = 0
+  draggedInventoryItem = ""
   closeItemMenu()
   inventoryUI.style.display = "none"
   updateInventory()
@@ -584,6 +588,7 @@ function setOpenChestState(chestId, items) {
   openChestId = nextId
   openChestItems = Array.isArray(items) ? items.map((raw) => normalizeItem(raw)) : []
   workbenchCraftOpen = false
+  chestIgnoreOutsideClickUntil = Date.now() + 320
   inventoryUI.style.display = "block"
   updateInventory()
 }
@@ -592,6 +597,7 @@ function closeChestStorage() {
   if (!openChestId && openChestItems.length === 0) return
   openChestId = 0
   openChestItems = []
+  chestIgnoreOutsideClickUntil = 0
   updateInventory()
 }
 
@@ -882,7 +888,7 @@ function renderChestSection(parent) {
   closeBtn.type = "button"
   closeBtn.className = "craft-close-btn"
   closeBtn.textContent = "Schließen"
-  closeBtn.addEventListener("click", closeChestStorage)
+  closeBtn.addEventListener("click", closeWorkbenchAndInventory)
 
   head.appendChild(title)
   head.appendChild(closeBtn)
@@ -1000,7 +1006,18 @@ function updateInventory() {
       count.textContent = `x${amount}`
 
       card.addEventListener("dragstart", (event) => {
+        draggedInventoryItem = item
         event.dataTransfer.setData("text/plain", item)
+        event.dataTransfer.effectAllowed = "move"
+      })
+
+      card.addEventListener("dragend", (event) => {
+        const dropTarget = document.elementFromPoint(event.clientX, event.clientY)
+        const droppedOutsideInventory = !dropTarget || !inventoryUI.contains(dropTarget)
+        if (droppedOutsideInventory && draggedInventoryItem) {
+          requestInventoryAction("drop_item", { item: draggedInventoryItem })
+        }
+        draggedInventoryItem = ""
       })
 
       card.addEventListener("click", () => {
@@ -1025,7 +1042,7 @@ function updateInventory() {
   panel.appendChild(subtitle)
   panel.appendChild(list)
 
-  if (!workbenchCraftOpen) {
+  if (!workbenchCraftOpen && !openChestId) {
     renderCraft2x2Section(panel)
   }
   renderWorkbenchSection(panel)
@@ -1035,6 +1052,8 @@ function updateInventory() {
 }
 
 document.addEventListener("click", (event) => {
+  if (inventoryUI.style.display !== "block") return
+
   if (!inventoryUI.contains(event.target)) {
     if (workbenchCraftOpen) {
       if (Date.now() < workbenchIgnoreOutsideClickUntil) {
@@ -1044,10 +1063,13 @@ document.addEventListener("click", (event) => {
       return
     }
     if (openChestId) {
+      if (Date.now() < chestIgnoreOutsideClickUntil) {
+        return
+      }
       closeWorkbenchAndInventory()
       return
     }
-    closeItemMenu()
+    closeWorkbenchAndInventory()
   }
 })
 

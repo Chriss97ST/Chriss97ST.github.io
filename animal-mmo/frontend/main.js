@@ -12,6 +12,7 @@ const touchInventory = document.getElementById("touchInventory")
 const touchSprint = document.getElementById("touchSprint")
 const touchJump = document.getElementById("touchJump")
 const touchChat = document.getElementById("touchChat")
+const touchEmote = document.getElementById("touchEmote")
 const touchPause = document.getElementById("touchPause")
 const adminWindow = document.getElementById("adminWindow")
 const adminAuthSection = document.getElementById("adminAuthSection")
@@ -236,7 +237,7 @@ function resetTouchMove() {
 }
 
 function setupTouchControls() {
-  if (!touchPad || !touchKnob || !touchInteract || !touchInventory || !touchSprint || !touchJump || !touchChat || !touchPause) {
+  if (!touchPad || !touchKnob || !touchInteract || !touchInventory || !touchSprint || !touchJump || !touchChat || !touchPause || !touchEmote) {
     return
   }
 
@@ -316,6 +317,26 @@ function setupTouchControls() {
     if (!gameActive) return
     if (isPauseMenuOpen()) return
     openChatInput()
+  })
+
+  touchEmote.addEventListener("pointerdown", (event) => {
+    event.preventDefault()
+    if (!gameActive) return
+    const emoteSelect = document.getElementById("chatEmoteSelect")
+    if (!emoteSelect) return
+
+    const options = Array.from(emoteSelect.options || [])
+    if (options.length === 0) return
+    const currentIndex = Math.max(0, emoteSelect.selectedIndex)
+    const nextIndex = (currentIndex + 1) % options.length
+    emoteSelect.selectedIndex = nextIndex
+
+    if (typeof setPlayerEmote === "function") {
+      setPlayerEmote(emoteSelect.value || "smile")
+    }
+    if (typeof sendEmote === "function") {
+      sendEmote(emoteSelect.value || "smile")
+    }
   })
 
   touchPause.addEventListener("pointerdown", (event) => {
@@ -446,7 +467,11 @@ function init3D(data) {
 
   const emoteSelect = document.getElementById("chatEmoteSelect")
   if (emoteSelect && typeof setPlayerEmote === "function") {
-    setPlayerEmote(emoteSelect.value || "smile")
+    const current = emoteSelect.value || "smile"
+    setPlayerEmote(current)
+    if (typeof sendEmote === "function") {
+      sendEmote(current)
+    }
   }
 
   spawnAnimals()

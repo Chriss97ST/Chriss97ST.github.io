@@ -80,6 +80,38 @@ WATER_BUCKET_FULL = "eimer_voll"
 WATER_BUCKET_EMPTY = "eimer_leer"
 ALLOWED_EQUIPPABLE_ITEMS = PICKAXE_ITEMS | AXE_ITEMS | {WATER_BUCKET_FULL, WATER_BUCKET_EMPTY}
 
+ITEM_ALIASES = {
+    "fruit": "frucht",
+    "frucht": "frucht",
+    "log": "holzstamm",
+    "holzstamm": "holzstamm",
+    "stone": "stein",
+    "stein": "stein",
+    "tree_seed": "baumsamen",
+    "treeseed": "baumsamen",
+    "baumsamen": "baumsamen",
+    "plank": "holzlatte",
+    "planks": "holzlatte",
+    "holzlatte": "holzlatte",
+    "stick": "stock",
+    "sticks": "stock",
+    "stock": "stock",
+    "workbench": "werkbank",
+    "werkbank": "werkbank",
+    "wood_pickaxe": "holzspitzhacke",
+    "holzspitzhacke": "holzspitzhacke",
+    "stone_pickaxe": "steinspitzhacke",
+    "steinspitzhacke": "steinspitzhacke",
+    "wood_axe": "holzaxt",
+    "holzaxt": "holzaxt",
+    "bucket_empty": "eimer_leer",
+    "eimer_leer": "eimer_leer",
+    "bucket_full": "eimer_voll",
+    "eimer_voll": "eimer_voll",
+    "chest": "kiste",
+    "kiste": "kiste",
+}
+
 
 async def send_json(ws: WebSocket, data):
     await ws.send_text(json.dumps(data))
@@ -226,24 +258,31 @@ def pickup_kind_to_item(kind: str):
         return "stein"
     if kind == "tree_seed":
         return "baumsamen"
+    if kind == "chest":
+        return "kiste"
     return kind
+
+
+def normalize_item_name(item: str):
+    key = str(item or "").strip().lower()
+    return ITEM_ALIASES.get(key, key)
 
 
 def consume_one_of(uid: int, item_names):
     for name in item_names:
-        removed = remove_inventory_item(uid, name, 1)
+        removed = remove_inventory_item(uid, normalize_item_name(name), 1)
         if removed > 0:
             return True
     return False
 
 
 def inventory_has(uid: int, item: str, amount: int):
-    return count_inventory_item(uid, item) >= amount
+    return count_inventory_item(uid, normalize_item_name(item)) >= amount
 
 
 def inventory_transform(uid: int, consumes, produces):
     for entry in consumes:
-        item = str(entry.get("item", "")).strip()
+        item = normalize_item_name(entry.get("item", ""))
         amount = int(entry.get("amount", 0))
         if amount <= 0 or not item:
             return False
@@ -251,12 +290,12 @@ def inventory_transform(uid: int, consumes, produces):
             return False
 
     for entry in consumes:
-        item = str(entry["item"])
+        item = normalize_item_name(entry["item"])
         amount = int(entry["amount"])
         remove_inventory_item(uid, item, amount)
 
     for entry in produces:
-        item = str(entry.get("item", "")).strip()
+        item = normalize_item_name(entry.get("item", ""))
         amount = int(entry.get("amount", 0))
         if amount <= 0 or not item:
             continue
@@ -274,7 +313,7 @@ async def send_inventory_state(ws: WebSocket, uid: int):
 
 
 def recipe_signature(entries):
-    return tuple(sorted((str(e.get("item", "")), int(e.get("amount", 0))) for e in entries))
+    return tuple(sorted((normalize_item_name(e.get("item", "")), int(e.get("amount", 0))) for e in entries))
 
 
 ALLOWED_RECIPES = {
@@ -496,6 +535,16 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 last_event_poll = now
                 last_seen_event_id = await flush_instance_events(ws, last_seen_event_id)
 
+            if msg_type == "request_resync":
+                await send_json(ws, {
+                    "type": "world_snapshot",
+                    **get_world_snapshot(),
+                    "animals": serialize_animals()
+                })
+                await send_inventory_state(ws, uid)
+                await sync_players_from_db(force=True)
+                continue
+
             if msg_type == "position":
                 if uid in frozen_players:
                     await send_json(ws, {
@@ -560,16 +609,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         nearest_dist2 = dist2
                         nearest_uid = other_uid
 
-                if nearest_uid is not None and nearest_dist2 <= 20.25:
-                    source_name = players.get(uid, {}).get("name", f"Player{uid}")
-                    target_name = players.get(nearest_uid, {}).get("name", f"Player{nearest_uid}")
-
-                    await publish_instance_event("chat", {
-                        "type": "chat",
-                        "uid": 0,
-                        "name": "System",
-                        "text": f"{source_name} interagiert mit {target_name}."
-                    })
+                # Interaction is still tracked, but no longer emits a public system chat message.
 
             if msg_type == "save":
                 data = msg["data"]
@@ -684,6 +724,8 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     required_damage = 4.0
 
                 equipped_item = get_equipped_item(uid)
+                if equipped_item in {WATER_BUCKET_EMPTY, WATER_BUCKET_FULL}:
+                    continue
                 damage_per_hit = 2.0 if equipped_item in AXE_ITEMS else 1.0
 
                 hit = apply_tree_chop_hit(obj_id, damage_per_hit, required_damage)
@@ -816,7 +858,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 action = str(msg.get("action", "")).strip().lower()
                 data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 chest_id = int(data.get("chest_id", 0))
-                item = str(data.get("item", "")).strip().lower()
+                item = normalize_item_name(data.get("item", ""))
                 amount = max(1, int(data.get("amount", 1) or 1))
                 px = float(data.get("x", 0))
                 pz = float(data.get("z", 0))
@@ -906,8 +948,31 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         add_inventory_item(uid, WATER_BUCKET_EMPTY, 1)
                         await send_inventory_state(ws, uid)
 
+                if action == "drop_item":
+                    item = normalize_item_name(action_data.get("item", ""))
+                    if not item:
+                        continue
+                    if consume_one_of(uid, [item]):
+                        info = players.get(uid, {})
+                        if info:
+                            px = float(info.get("x", 0))
+                            pz = float(info.get("z", 0))
+                        else:
+                            pos = load_user_pos(uid)
+                            px = float(pos.get("x", 0))
+                            pz = float(pos.get("z", 0))
+
+                        drop = spawn_pickup_near(px, pz, item)
+                        if drop:
+                            await publish_instance_event("world_patch", {
+                                "type": "world_patch",
+                                "event": "admin_drop_added",
+                                "pickup": drop
+                            })
+                        await send_inventory_state(ws, uid)
+
                 if action == "equip_item":
-                    item = str(action_data.get("item", "")).strip().lower()
+                    item = normalize_item_name(action_data.get("item", ""))
                     if item not in ALLOWED_EQUIPPABLE_ITEMS:
                         continue
                     if not inventory_has(uid, item, 1):
@@ -1061,7 +1126,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     await send_json(ws, {"type": "admin_error", "message": "not_authorized"})
                     continue
 
-                item = str(msg.get("item", "")).strip().lower()
+                item = normalize_item_name(msg.get("item", ""))
                 if item not in ADMIN_DROPPABLE_ITEMS:
                     await send_json(ws, {"type": "admin_error", "message": "invalid_item"})
                     continue

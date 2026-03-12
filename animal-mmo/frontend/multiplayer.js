@@ -20,6 +20,12 @@ const lastSentPos = { x: 0, y: 0, z: 0 }
 const POS_SEND_INTERVAL_MS = 50
 const POS_KEEPALIVE_MS = 450
 const POS_MIN_DIST2 = 0.0009
+const RESYNC_INTERVAL_MS = 8000
+let lastResyncSentAt = 0
+
+function isMobileClient() {
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches
+}
 
 function createNameTag(text) {
   const canvas = document.createElement("canvas")
@@ -271,7 +277,8 @@ function appendChatMessage(name, text) {
   line.appendChild(textNode)
   chatMessages.appendChild(line)
 
-  while (chatMessages.children.length > 30) {
+  const maxMessages = isMobileClient() ? 3 : 30
+  while (chatMessages.children.length > maxMessages) {
     chatMessages.removeChild(chatMessages.firstChild)
   }
 
@@ -337,6 +344,12 @@ function connectWS(id) {
   }
   ws = new WebSocket(`wss://chriss97st.ddns.net/animmo/api/ws/${id}`)
   let disconnected = false
+
+  ws.onopen = () => {
+    requestResync()
+    const emote = (chatEmoteSelect && chatEmoteSelect.value) ? chatEmoteSelect.value : "smile"
+    sendEmote(emote)
+  }
 
   ws.onmessage = (msg) => {
     const data = JSON.parse(msg.data)
@@ -477,6 +490,19 @@ function sendPos() {
   lastSentPos.x = x
   lastSentPos.y = y
   lastSentPos.z = z
+
+  if (now - lastResyncSentAt >= RESYNC_INTERVAL_MS) {
+    lastResyncSentAt = now
+    requestResync()
+  }
+}
+
+function requestResync() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "request_resync"
+  }))
 }
 
 function requestActionE() {

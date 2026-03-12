@@ -449,6 +449,8 @@ function addPickupMesh(pickup) {
   const isLog = kind === "log"
   const isStone = kind === "stone"
   const isTreeSeed = kind === "tree_seed"
+  const isFruit = kind === "fruit"
+  const isKnown = isLog || isStone || isTreeSeed || isFruit
 
   const geometry = isLog
     ? new THREE.CylinderGeometry(0.22, 0.22, 0.9, 8)
@@ -457,7 +459,9 @@ function addPickupMesh(pickup) {
       : new THREE.SphereGeometry(0.23, 10, 10)
 
   const material = new THREE.MeshStandardMaterial({
-    color: isLog ? 0x8b5a2b : isStone ? 0x8a949e : isTreeSeed ? 0x9ccc52 : 0xff2f2f,
+    color: isLog ? 0x8b5a2b : isStone ? 0x8a949e : isTreeSeed ? 0x9ccc52 : isFruit ? 0xff2f2f : 0x36a7ff,
+    emissive: isKnown ? 0x000000 : 0x0f4d8f,
+    emissiveIntensity: isKnown ? 0 : 1.1,
     flatShading: true
   })
 

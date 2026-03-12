@@ -796,6 +796,12 @@ input:focus {
     right: max(8px, env(safe-area-inset-right));
     top: calc(max(8px, env(safe-area-inset-top)) + 52px);
     width: min(360px, calc(100vw - 16px - env(safe-area-inset-right)));
+    background: rgba(8, 14, 20, 0.48);
+    border-color: rgba(125, 170, 209, 0.2);
+  }
+
+  .chat-line {
+    background: rgba(30, 49, 66, 0.4);
   }
 
   .mobile-controls.active {
