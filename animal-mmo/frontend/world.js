@@ -33,30 +33,112 @@ function clearWorldVisuals() {
 function createTreeMesh(obj) {
   const group = new THREE.Group()
 
+  const species = obj.tree_species || "oak"
+  const variant = Number(obj.tree_variant || 1)
+  const growthStage = Number(obj.growth_stage ?? 2)
+  const isFresh = Number(obj.planted_fresh || 0) === 1
+
+  const stageScale = growthStage <= 0 ? 0.46 : growthStage === 1 ? 0.78 : 1
+  const trunkScale = Number(obj.trunk_scale || 1) * stageScale
+  const heightScale = Number(obj.height_scale || 1) * stageScale
+
+  const trunkRadiusTop = 0.16 * obj.scale * trunkScale
+  const trunkRadiusBottom = 0.24 * obj.scale * trunkScale
+  const trunkHeight = 2.1 * obj.scale * heightScale
+
+  let trunkColor = 0x8b5a2b
+  let leavesColor = 0x2fb463
+  let crownKind = "cone"
+
+  if (species === "pine") {
+    trunkColor = 0x6d4424
+    leavesColor = variant === 1 ? 0x2f8f43 : variant === 2 ? 0x3aa655 : 0x267f3a
+    crownKind = "tiered"
+  } else if (species === "birch") {
+    trunkColor = 0xdbd3c3
+    leavesColor = variant === 1 ? 0xa8d85f : variant === 2 ? 0x9fcd57 : 0xb4de6b
+    crownKind = "round"
+  } else {
+    leavesColor = variant === 1 ? 0x2fb463 : variant === 2 ? 0x37c26a : 0x2ea65e
+    crownKind = variant === 3 ? "round" : "cone"
+  }
+
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22 * obj.scale, 0.26 * obj.scale, 2.2 * obj.scale, 6),
-    new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true })
+    new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 7),
+    new THREE.MeshStandardMaterial({ color: trunkColor, flatShading: true })
   )
 
-  const leaves = new THREE.Mesh(
-    new THREE.ConeGeometry(1.45 * obj.scale, 2.4 * obj.scale, 7),
-    new THREE.MeshStandardMaterial({ color: 0x2fb463, flatShading: true })
-  )
+  trunk.position.y = trunkHeight * 0.5
 
-  trunk.position.y = 1.1 * obj.scale
-  leaves.position.y = 2.6 * obj.scale
+  const leafMat = new THREE.MeshStandardMaterial({ color: leavesColor, flatShading: true })
 
-  group.add(trunk)
-  group.add(leaves)
+  if (growthStage <= 0) {
+    const sproutStem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03 * obj.scale, 0.035 * obj.scale, 0.4 * obj.scale, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a7a2f, flatShading: true })
+    )
+    sproutStem.position.y = 0.25 * obj.scale
+
+    const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(0.16 * obj.scale, 8, 8), leafMat)
+    const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(0.13 * obj.scale, 8, 8), leafMat)
+    leaf1.position.set(-0.12 * obj.scale, 0.48 * obj.scale, 0)
+    leaf2.position.set(0.14 * obj.scale, 0.55 * obj.scale, 0.04 * obj.scale)
+
+    group.add(sproutStem)
+    group.add(leaf1)
+    group.add(leaf2)
+  } else {
+    group.add(trunk)
+
+    if (crownKind === "round") {
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(1.1 * obj.scale * heightScale, 8, 7), leafMat)
+      crown.position.y = trunkHeight + 0.95 * obj.scale * heightScale
+      group.add(crown)
+
+      if (variant >= 2) {
+        const crown2 = new THREE.Mesh(new THREE.SphereGeometry(0.85 * obj.scale * heightScale, 8, 7), leafMat)
+        crown2.position.set(0.45 * obj.scale, trunkHeight + 0.7 * obj.scale * heightScale, -0.2 * obj.scale)
+        group.add(crown2)
+      }
+    } else if (crownKind === "tiered") {
+      const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.05 * obj.scale, 1.65 * obj.scale * heightScale, 7), leafMat)
+      const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.8 * obj.scale, 1.35 * obj.scale * heightScale, 7), leafMat)
+      const cone3 = new THREE.Mesh(new THREE.ConeGeometry(0.55 * obj.scale, 1.0 * obj.scale * heightScale, 7), leafMat)
+      cone1.position.y = trunkHeight + 0.55 * obj.scale * heightScale
+      cone2.position.y = trunkHeight + 1.2 * obj.scale * heightScale
+      cone3.position.y = trunkHeight + 1.78 * obj.scale * heightScale
+      group.add(cone1)
+      group.add(cone2)
+      group.add(cone3)
+    } else {
+      const leaves = new THREE.Mesh(
+        new THREE.ConeGeometry(1.45 * obj.scale, 2.4 * obj.scale * heightScale, 7),
+        leafMat
+      )
+      leaves.position.y = trunkHeight + 0.7 * obj.scale * heightScale
+      group.add(leaves)
+    }
+  }
+
+  if (isFresh) {
+    const freshMarker = new THREE.Mesh(
+      new THREE.TorusGeometry(0.45 * obj.scale, 0.05 * obj.scale, 8, 16),
+      new THREE.MeshStandardMaterial({ color: 0xefff54, emissive: 0x3d3f08, flatShading: true })
+    )
+    freshMarker.rotation.x = Math.PI * 0.5
+    freshMarker.position.y = 0.08
+    group.add(freshMarker)
+  }
 
   group.position.set(obj.x, obj.y - 1, obj.z)
   group.rotation.y = obj.rotation
   group.userData.worldObjectId = obj.id
   group.userData.worldObjectKind = "tree"
-  group.userData.collisionRadius = 1.45 * obj.scale
+  group.userData.collisionRadius = growthStage <= 0 ? 0.45 * obj.scale : growthStage === 1 ? 1.0 * obj.scale : 1.45 * obj.scale
 
   const fruitNodes = []
-  for (let i = 0; i < obj.fruit_count; i++) {
+  const fruitCount = growthStage <= 0 ? 0 : Number(obj.fruit_count || 0)
+  for (let i = 0; i < fruitCount; i++) {
     const fruit = new THREE.Mesh(
       new THREE.SphereGeometry(0.15, 8, 8),
       new THREE.MeshStandardMaterial({ color: 0xff6644, flatShading: true })
@@ -67,7 +149,7 @@ function createTreeMesh(obj) {
     const radius = 0.45 + ring * 0.22
     fruit.position.set(
       Math.cos(angle) * radius,
-      (1.8 + ring * 0.24) * obj.scale,
+      (trunkHeight * 0.72) + (ring * 0.22 * obj.scale),
       Math.sin(angle) * radius
     )
 
@@ -83,7 +165,14 @@ function createTreeMesh(obj) {
     kind: obj.kind,
     mesh: group,
     fruitNodes,
-    scale: obj.scale
+    scale: obj.scale,
+    trunkHeight,
+    growthStage,
+    treeSpecies: species,
+    treeVariant: variant,
+    trunkScale: Number(obj.trunk_scale || 1),
+    heightScale: Number(obj.height_scale || 1),
+    plantedFresh: isFresh
   })
 }
 
@@ -153,6 +242,114 @@ function createWorkbenchMesh(obj) {
   })
 }
 
+function createMeadowMesh(obj) {
+  const group = new THREE.Group()
+
+  const patch1 = new THREE.Mesh(
+    new THREE.CircleGeometry(2.2 * obj.scale, 18),
+    new THREE.MeshStandardMaterial({ color: 0x5fbf59, flatShading: true })
+  )
+  patch1.rotation.x = -Math.PI * 0.5
+  patch1.position.y = 0.04
+
+  const patch2 = new THREE.Mesh(
+    new THREE.CircleGeometry(1.55 * obj.scale, 14),
+    new THREE.MeshStandardMaterial({ color: 0x72d067, flatShading: true })
+  )
+  patch2.rotation.x = -Math.PI * 0.5
+  patch2.position.set(0.95 * obj.scale, 0.041, -0.45 * obj.scale)
+
+  group.add(patch1)
+  group.add(patch2)
+
+  group.position.set(obj.x, obj.y, obj.z)
+  group.rotation.y = obj.rotation
+  group.userData.worldObjectId = obj.id
+  group.userData.worldObjectKind = "meadow"
+  group.userData.collisionRadius = 0
+
+  scene.add(group)
+
+  worldObjectsById.set(obj.id, {
+    id: obj.id,
+    kind: obj.kind,
+    mesh: group,
+    fruitNodes: []
+  })
+}
+
+function createPondMesh(obj) {
+  const group = new THREE.Group()
+
+  const shore = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.05 * obj.scale, 2.2 * obj.scale, 0.08, 20),
+    new THREE.MeshStandardMaterial({ color: 0x7d6247, flatShading: true })
+  )
+  shore.position.y = 0.03
+
+  const water = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.85 * obj.scale, 1.95 * obj.scale, 0.045, 20),
+    new THREE.MeshStandardMaterial({ color: 0x3d96d8, transparent: true, opacity: 0.83, flatShading: true })
+  )
+  water.position.y = 0.062
+
+  group.add(shore)
+  group.add(water)
+
+  group.position.set(obj.x, obj.y, obj.z)
+  group.rotation.y = obj.rotation
+  group.userData.worldObjectId = obj.id
+  group.userData.worldObjectKind = "pond"
+  group.userData.collisionRadius = 0
+
+  scene.add(group)
+
+  worldObjectsById.set(obj.id, {
+    id: obj.id,
+    kind: obj.kind,
+    mesh: group,
+    fruitNodes: []
+  })
+}
+
+function createRiverMesh(obj) {
+  const group = new THREE.Group()
+
+  const lengthScale = Number(obj.height_scale || 3.5)
+  const width = 1.55 * obj.scale
+  const length = 6.4 * lengthScale
+
+  const bed = new THREE.Mesh(
+    new THREE.BoxGeometry(width + 0.55, 0.08, length + 0.45),
+    new THREE.MeshStandardMaterial({ color: 0x6f5b45, flatShading: true })
+  )
+  bed.position.y = 0.03
+
+  const water = new THREE.Mesh(
+    new THREE.BoxGeometry(width, 0.05, length),
+    new THREE.MeshStandardMaterial({ color: 0x2f84c7, transparent: true, opacity: 0.78, flatShading: true })
+  )
+  water.position.y = 0.07
+
+  group.add(bed)
+  group.add(water)
+
+  group.position.set(obj.x, obj.y, obj.z)
+  group.rotation.y = obj.rotation
+  group.userData.worldObjectId = obj.id
+  group.userData.worldObjectKind = "river"
+  group.userData.collisionRadius = 0
+
+  scene.add(group)
+
+  worldObjectsById.set(obj.id, {
+    id: obj.id,
+    kind: obj.kind,
+    mesh: group,
+    fruitNodes: []
+  })
+}
+
 function addWorldObject(obj) {
   if (obj.kind === "tree") {
     createTreeMesh(obj)
@@ -160,12 +357,19 @@ function addWorldObject(obj) {
     createRockMesh(obj)
   } else if (obj.kind === "workbench") {
     createWorkbenchMesh(obj)
+  } else if (obj.kind === "meadow") {
+    createMeadowMesh(obj)
+  } else if (obj.kind === "pond") {
+    createPondMesh(obj)
+  } else if (obj.kind === "river") {
+    createRiverMesh(obj)
   }
 }
 
 function setTreeFruitCount(treeId, fruitCount) {
   const entry = worldObjectsById.get(treeId)
   if (!entry || entry.kind !== "tree") return
+  if (entry.growthStage <= 0) return
 
   for (const node of entry.fruitNodes) {
     entry.mesh.remove(node)
@@ -185,7 +389,7 @@ function setTreeFruitCount(treeId, fruitCount) {
 
     fruit.position.set(
       Math.cos(angle) * radius,
-      (2.0 + ring * 0.24) * (entry.scale || 1),
+      (entry.trunkHeight || (2.0 * (entry.scale || 1))) * 0.72 + ring * 0.22,
       Math.sin(angle) * radius
     )
 
@@ -200,13 +404,16 @@ function addPickupMesh(pickup) {
   const kind = pickup.kind
   const isLog = kind === "log"
   const isStone = kind === "stone"
+  const isTreeSeed = kind === "tree_seed"
 
   const geometry = isLog
     ? new THREE.CylinderGeometry(0.22, 0.22, 0.9, 8)
-    : new THREE.SphereGeometry(0.23, 10, 10)
+    : isTreeSeed
+      ? new THREE.ConeGeometry(0.2, 0.42, 8)
+      : new THREE.SphereGeometry(0.23, 10, 10)
 
   const material = new THREE.MeshStandardMaterial({
-    color: isLog ? 0x8b5a2b : isStone ? 0x8a949e : 0xff2f2f,
+    color: isLog ? 0x8b5a2b : isStone ? 0x8a949e : isTreeSeed ? 0x9ccc52 : 0xff2f2f,
     flatShading: true
   })
 
@@ -216,6 +423,7 @@ function addPickupMesh(pickup) {
   mesh.userData.pickupKind = pickup.kind
 
   if (isLog) mesh.rotation.z = 1.4
+  if (isTreeSeed) mesh.rotation.x = 0.15
 
   scene.add(mesh)
   pickupMeshesById.set(pickup.id, mesh)
@@ -240,6 +448,12 @@ function removePickupMesh(pickupId) {
 
   scene.remove(mesh)
   pickupMeshesById.delete(pickupId)
+}
+
+function upsertWorldObject(obj) {
+  if (!obj || !obj.id) return
+  removeWorldObject(obj.id)
+  addWorldObject(obj)
 }
 
 function resolveWorldObjectFromIntersection(intersection) {
@@ -274,7 +488,11 @@ function handleWorldLeftClick(event, camera, canvas) {
     if (!worldObject) continue
 
     if (worldObject.kind === "tree") {
-      requestChopTree(worldObject.id)
+      if (event.shiftKey) {
+        requestWaterTree(worldObject.id)
+      } else {
+        requestChopTree(worldObject.id)
+      }
       break
     }
 
@@ -287,6 +505,26 @@ function handleWorldLeftClick(event, camera, canvas) {
       openWorkbenchCrafting()
       break
     }
+  }
+}
+
+function handleWorldRightClick(event, camera, canvas) {
+  if (!camera || !canvas) return
+
+  const rect = canvas.getBoundingClientRect()
+  worldPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  worldPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  worldRaycaster.setFromCamera(worldPointer, camera)
+  const intersections = worldRaycaster.intersectObjects(objects, true)
+
+  for (const hit of intersections) {
+    const worldObject = resolveWorldObjectFromIntersection(hit)
+    if (!worldObject) continue
+    if (worldObject.kind !== "tree") continue
+
+    requestWaterTree(worldObject.id)
+    break
   }
 }
 
@@ -342,5 +580,17 @@ function applyWorldPatch(patch) {
 
   if (patch.event === "workbench_added" && patch.object) {
     addWorldObject(patch.object)
+  }
+
+  if (patch.event === "tree_added" && patch.object) {
+    addWorldObject(patch.object)
+  }
+
+  if (patch.event === "tree_updated" && patch.object) {
+    upsertWorldObject(patch.object)
+  }
+
+  if (patch.event === "admin_drop_added" && patch.pickup) {
+    addPickupMesh(patch.pickup)
   }
 }

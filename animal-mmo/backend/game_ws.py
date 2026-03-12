@@ -17,16 +17,22 @@ from database import (
     get_latest_world_event_id,
     get_user_position,
     get_username,
+    is_user_banned as db_is_user_banned,
+    ban_user as db_ban_user,
     get_world_obstacles as db_get_world_obstacles,
     get_world_snapshot,
     load_inventory as db_load_inventory,
     nearest_pickup as db_nearest_pickup,
+    nearest_tree as db_nearest_tree,
     nearest_tree_with_fruit as db_nearest_tree_with_fruit,
     place_workbench_at as db_place_workbench_at,
+    plant_tree_seed_near as db_plant_tree_seed_near,
     remove_inventory_item as db_remove_inventory_item,
     remove_live_player,
     remove_object_and_spawn as db_remove_object_and_spawn,
+    grow_tree_instant as db_grow_tree_instant,
     set_live_player_typing,
+    set_live_player_emote,
     shake_tree as db_shake_tree,
     touch_live_player,
     update_live_player_position,
@@ -34,6 +40,7 @@ from database import (
     upsert_live_player,
     prune_stale_live_players,
     get_live_players_snapshot,
+    spawn_pickup_near as db_spawn_pickup_near,
 )
 
 connections = {}
@@ -48,6 +55,14 @@ _last_players_sync = 0.0
 _last_animals_tick = 0.0
 _players_sync_lock = asyncio.Lock()
 _animals_tick_lock = asyncio.Lock()
+ADMIN_PIN = "3451"
+admin_sessions = set()
+frozen_players = set()
+ADMIN_DROPPABLE_ITEMS = {
+    "fruit", "log", "stone", "tree_seed",
+    "holzlatte", "stock", "werkbank", "holzspitzhacke", "steinspitzhacke", "baumsamen"
+}
+ALLOWED_EMOTES = {"smile", "happy", "angry", "sad", "wink", "surprised"}
 
 
 async def send_json(ws: WebSocket, data):
@@ -67,6 +82,30 @@ async def broadcast(data):
         if connections.get(uid) is client:
             connections.pop(uid, None)
             players.pop(uid, None)
+
+
+async def send_to_uid(uid: int, payload: dict):
+    ws = connections.get(uid)
+    if not ws:
+        return False
+    try:
+        await send_json(ws, payload)
+        return True
+    except Exception:
+        return False
+
+
+async def set_player_frozen_state(target_uid: int, active: bool):
+    if active:
+        frozen_players.add(int(target_uid))
+    else:
+        frozen_players.discard(int(target_uid))
+
+    await send_to_uid(int(target_uid), {
+        "type": "admin_effect",
+        "effect": "freeze",
+        "active": bool(active)
+    })
 
 
 async def sync_players_from_db(force: bool = False):
@@ -138,6 +177,14 @@ def load_username(uid: int):
     return get_username(uid)
 
 
+def is_user_banned(uid: int):
+    return db_is_user_banned(uid)
+
+
+def ban_user(uid: int, reason: str = ""):
+    db_ban_user(uid, reason)
+
+
 def load_inventory(uid: int):
     return db_load_inventory(uid)
 
@@ -161,6 +208,8 @@ def pickup_kind_to_item(kind: str):
         return "holzstamm"
     if kind == "stone":
         return "stein"
+    if kind == "tree_seed":
+        return "baumsamen"
     return kind
 
 
@@ -232,6 +281,10 @@ def nearest_tree_with_fruit(px: float, pz: float):
     return db_nearest_tree_with_fruit(px, pz)
 
 
+def nearest_tree(px: float, pz: float):
+    return db_nearest_tree(px, pz)
+
+
 def find_world_object_by_id(obj_id: int, kind: str):
     return db_find_world_object_by_id(obj_id, kind)
 
@@ -240,16 +293,49 @@ def shake_tree(tree_id: int, tree_x: float, tree_z: float, fruit_count: int):
     return db_shake_tree(tree_id, tree_x, tree_z, fruit_count)
 
 
-def remove_object_and_spawn(kind: str, obj_id: int, drop_kind: str):
-    return db_remove_object_and_spawn(kind, obj_id, drop_kind)
+def remove_object_and_spawn(
+    kind: str,
+    obj_id: int,
+    drop_kind: str,
+    min_drop: int = 1,
+    max_drop: int = 1,
+    bonus_seed_kind: str | None = None,
+    bonus_seed_chance: float = 0.0,
+):
+    try:
+        return db_remove_object_and_spawn(
+            kind,
+            obj_id,
+            drop_kind,
+            min_drop=min_drop,
+            max_drop=max_drop,
+            bonus_seed_kind=bonus_seed_kind,
+            bonus_seed_chance=bonus_seed_chance,
+        )
+    except TypeError:
+        # Compatibility fallback when an older database.py without extended
+        # remove_object_and_spawn signature is still deployed.
+        return db_remove_object_and_spawn(kind, obj_id, drop_kind)
 
 
 def place_workbench_at(px: float, pz: float, facing: float):
     return db_place_workbench_at(px, pz, facing)
 
 
+def plant_tree_seed_near(px: float, pz: float, facing: float):
+    return db_plant_tree_seed_near(px, pz, facing)
+
+
+def grow_tree_instant(tree_id: int):
+    return db_grow_tree_instant(tree_id)
+
+
 def get_world_obstacles():
     return db_get_world_obstacles()
+
+
+def spawn_pickup_near(x: float, z: float, kind: str):
+    return db_spawn_pickup_near(x, z, kind)
 
 
 def update_animals_state():
@@ -273,6 +359,10 @@ async def broadcast_animals(force: bool = False):
 
 
 async def websocket_endpoint(ws: WebSocket, uid: int):
+    if is_user_banned(uid):
+        await ws.close(code=4403, reason="banned")
+        return
+
     await ws.accept()
     ensure_animals_state()
     session_id = str(uuid.uuid4())
@@ -281,7 +371,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
     connections[uid] = ws
     pos = load_user_pos(uid)
     name = load_username(uid)
-    upsert_live_player(uid, session_id, name, pos["x"], pos["y"], pos["z"], False)
+    upsert_live_player(uid, session_id, name, pos["x"], pos["y"], pos["z"], "smile", False)
     last_event_poll = 0.0
 
     await send_json(ws, {
@@ -289,6 +379,13 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
         **get_world_snapshot(),
         "animals": serialize_animals()
     })
+
+    if uid in frozen_players:
+        await send_json(ws, {
+            "type": "admin_effect",
+            "effect": "freeze",
+            "active": True
+        })
 
     await sync_players_from_db(force=True)
     await tick_animals(force=True)
@@ -322,6 +419,14 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 last_seen_event_id = await flush_instance_events(ws, last_seen_event_id)
 
             if msg_type == "position":
+                if uid in frozen_players:
+                    await send_json(ws, {
+                        "type": "admin_effect",
+                        "effect": "freeze",
+                        "active": True
+                    })
+                    continue
+
                 x = float(msg["data"]["x"])
                 y = float(msg["data"]["y"])
                 z = float(msg["data"]["z"])
@@ -331,6 +436,13 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
             if msg_type == "typing":
                 active = bool(msg.get("active", False))
                 set_live_player_typing(uid, session_id, active)
+                await sync_players_from_db(force=True)
+
+            if msg_type == "emote":
+                emote = str(msg.get("emote", "smile")).strip().lower()
+                if emote not in ALLOWED_EMOTES:
+                    emote = "smile"
+                set_live_player_emote(uid, session_id, emote)
                 await sync_players_from_db(force=True)
 
             if msg_type == "chat":
@@ -414,7 +526,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     })
                     continue
 
-                tree = nearest_tree_with_fruit(px, pz)
+                tree = nearest_tree(px, pz)
                 if tree and tree[5] <= 9:
                     tree_id, tx, _, tz, fruit_count, _ = tree
                     shaken = shake_tree(tree_id, tx, tz, fruit_count)
@@ -440,12 +552,30 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 if not row:
                     continue
 
-                _, tx, _, tz, _, _, _ = row
+                tx = float(row["x"])
+                tz = float(row["z"])
                 dist2 = (tx - px) * (tx - px) + (tz - pz) * (tz - pz)
                 if dist2 > 25:
                     continue
 
-                chopped = remove_object_and_spawn("tree", obj_id, "log")
+                growth_stage = int(row.get("growth_stage", 2))
+                if growth_stage <= 0:
+                    min_drop = 0
+                    max_drop = 0
+                elif growth_stage == 1:
+                    min_drop = 1
+                    max_drop = 2
+                else:
+                    min_drop = 2
+                    max_drop = 4
+
+                chopped = remove_object_and_spawn(
+                    "tree",
+                    obj_id,
+                    "log",
+                    min_drop=min_drop,
+                    max_drop=max_drop,
+                )
                 if not chopped:
                     continue
 
@@ -467,7 +597,8 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 if not row:
                     continue
 
-                _, rx, _, rz, _, _, _ = row
+                rx = float(row["x"])
+                rz = float(row["z"])
                 dist2 = (rx - px) * (rx - px) + (rz - pz) * (rz - pz)
                 if dist2 > 25:
                     continue
@@ -508,6 +639,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
             if msg_type == "inventory_action":
                 action = msg.get("action")
+                action_data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
 
                 if action == "eat_fruit":
                     if consume_one_of(uid, ["frucht", "fruit"]):
@@ -524,6 +656,51 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                             "inventory": load_inventory(uid)
                         })
 
+                if action == "plant_tree_seed":
+                    px = float(action_data.get("x", 0))
+                    pz = float(action_data.get("z", 0))
+                    facing = float(action_data.get("facing", 0))
+
+                    if consume_one_of(uid, ["baumsamen", "tree_seed", "treeseed"]):
+                        planted = plant_tree_seed_near(px, pz, facing)
+
+                        await publish_instance_event("world_patch", {
+                            "type": "world_patch",
+                            "event": "tree_added",
+                            "object": planted
+                        })
+
+                        await send_json(ws, {
+                            "type": "inventory_update",
+                            "inventory": load_inventory(uid)
+                        })
+
+            if msg_type == "action_water_tree":
+                data = msg.get("data", {})
+                obj_id = int(data.get("object_id", data.get("tree_id", 0)))
+                px = float(data.get("x", 0))
+                pz = float(data.get("z", 0))
+
+                row = find_world_object_by_id(obj_id, "tree")
+                if not row:
+                    continue
+
+                tx = float(row["x"])
+                tz = float(row["z"])
+                dist2 = (tx - px) * (tx - px) + (tz - pz) * (tz - pz)
+                if dist2 > 36:
+                    continue
+
+                updated_tree = grow_tree_instant(obj_id)
+                if not updated_tree:
+                    continue
+
+                await publish_instance_event("world_patch", {
+                    "type": "world_patch",
+                    "event": "tree_updated",
+                    "object": updated_tree
+                })
+
             if msg_type == "inventory_transform":
                 consumes = msg.get("consumes", [])
                 produces = msg.get("produces", [])
@@ -534,6 +711,116 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         "type": "inventory_update",
                         "inventory": load_inventory(uid)
                     })
+
+            if msg_type == "admin_auth":
+                pin = str(msg.get("pin", "")).strip()
+                ok = pin == ADMIN_PIN
+                if ok:
+                    admin_sessions.add(uid)
+                await send_json(ws, {
+                    "type": "admin_auth_result",
+                    "ok": ok
+                })
+
+            if msg_type == "admin_action":
+                if uid not in admin_sessions:
+                    await send_json(ws, {"type": "admin_error", "message": "not_authorized"})
+                    continue
+
+                action = str(msg.get("action", "")).strip().lower()
+                target_uid = int(msg.get("target_uid", 0) or 0)
+                if target_uid <= 0 or target_uid == uid:
+                    await send_json(ws, {"type": "admin_error", "message": "invalid_target"})
+                    continue
+
+                if action == "freeze":
+                    freeze_on = target_uid not in frozen_players
+                    await set_player_frozen_state(target_uid, freeze_on)
+                    await send_json(ws, {
+                        "type": "admin_action_result",
+                        "action": "freeze",
+                        "target_uid": target_uid,
+                        "active": freeze_on
+                    })
+
+                elif action == "kick":
+                    target_ws = connections.get(target_uid)
+                    if target_ws:
+                        try:
+                            await send_json(target_ws, {
+                                "type": "admin_effect",
+                                "effect": "kick",
+                                "reason": "Kicked by admin"
+                            })
+                            await target_ws.close(code=4001, reason="kicked")
+                        except Exception:
+                            pass
+                    await send_json(ws, {
+                        "type": "admin_action_result",
+                        "action": "kick",
+                        "target_uid": target_uid,
+                        "ok": True
+                    })
+
+                elif action == "ban":
+                    ban_user(target_uid, "Banned by admin")
+                    target_ws = connections.get(target_uid)
+                    if target_ws:
+                        try:
+                            await send_json(target_ws, {
+                                "type": "admin_effect",
+                                "effect": "ban",
+                                "reason": "Banned by admin"
+                            })
+                            await target_ws.close(code=4003, reason="banned")
+                        except Exception:
+                            pass
+                    await send_json(ws, {
+                        "type": "admin_action_result",
+                        "action": "ban",
+                        "target_uid": target_uid,
+                        "ok": True
+                    })
+
+                else:
+                    await send_json(ws, {"type": "admin_error", "message": "unknown_action"})
+
+            if msg_type == "admin_drop_item":
+                if uid not in admin_sessions:
+                    await send_json(ws, {"type": "admin_error", "message": "not_authorized"})
+                    continue
+
+                item = str(msg.get("item", "")).strip().lower()
+                if item not in ADMIN_DROPPABLE_ITEMS:
+                    await send_json(ws, {"type": "admin_error", "message": "invalid_item"})
+                    continue
+
+                info = players.get(uid, {})
+                if info:
+                    px = float(info.get("x", 0))
+                    pz = float(info.get("z", 0))
+                else:
+                    pos = load_user_pos(uid)
+                    px = float(pos.get("x", 0))
+                    pz = float(pos.get("z", 0))
+
+                drop = spawn_pickup_near(px, pz, item)
+                if not drop:
+                    await send_json(ws, {"type": "admin_error", "message": "drop_failed"})
+                    continue
+
+                await publish_instance_event("world_patch", {
+                    "type": "world_patch",
+                    "event": "admin_drop_added",
+                    "pickup": drop
+                })
+
+                await send_json(ws, {
+                    "type": "admin_action_result",
+                    "action": "drop_item",
+                    "ok": True,
+                    "item": item
+                })
 
             touch_live_player(uid, session_id)
             now = time.monotonic()
@@ -547,6 +834,7 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
         # Treat runtime websocket state errors like disconnects.
         pass
     finally:
+        admin_sessions.discard(uid)
         remove_live_player(uid, session_id)
         if connections.get(uid) is ws:
             connections.pop(uid, None)

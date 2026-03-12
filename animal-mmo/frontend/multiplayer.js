@@ -7,6 +7,7 @@ const remotePlayers = new Map()
 const chatUI = document.getElementById("chatUI")
 const chatMessages = document.getElementById("chatMessages")
 const chatInput = document.getElementById("chatInput")
+const chatEmoteSelect = document.getElementById("chatEmoteSelect")
 const onlineUsers = document.getElementById("onlineUsers")
 
 let chatVisibleTimeout = null
@@ -74,7 +75,8 @@ function createRemotePlayer(name) {
     nameTag,
     typingTag,
     typing: false,
-    lastServerUpdateMs: performance.now()
+    lastServerUpdateMs: performance.now(),
+    emote: "smile"
   }
 }
 
@@ -135,6 +137,15 @@ function sendTypingStatus(active) {
   }))
 }
 
+function sendEmote(emote) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "emote",
+    emote: String(emote || "smile")
+  }))
+}
+
 function updateRemotePlayersSnapshot(snapshot) {
   const now = performance.now()
   const seen = new Set()
@@ -163,6 +174,12 @@ function updateRemotePlayersSnapshot(snapshot) {
     entry.lastServerUpdateMs = now
     entry.typing = Boolean(info.typing)
     entry.typingTag.visible = entry.typing
+
+    const nextEmote = String(info.emote || "smile")
+    if (entry.emote !== nextEmote) {
+      setModelFaceEmote(entry.mesh, nextEmote)
+      entry.emote = nextEmote
+    }
   }
 
   for (const [uid, entry] of remotePlayers.entries()) {
@@ -259,6 +276,7 @@ function appendChatMessage(name, text) {
 }
 
 function openChatInput() {
+  if (typeof isPauseMenuOpen === "function" && isPauseMenuOpen()) return
   chatInputActive = true
   chatUI.classList.add("active")
   setChatVisible(true)
@@ -342,6 +360,36 @@ function connectWS(id) {
 
     if (data.type === "animals") {
       applyAnimalsSnapshot(data.animals || [])
+    }
+
+    if (data.type === "admin_auth_result") {
+      if (typeof onAdminAuthResult === "function") {
+        onAdminAuthResult(Boolean(data.ok))
+      }
+    }
+
+    if (data.type === "admin_action_result") {
+      if (typeof onAdminActionResult === "function") {
+        onAdminActionResult(data)
+      }
+    }
+
+    if (data.type === "admin_error") {
+      if (typeof onAdminError === "function") {
+        onAdminError(data.message || "admin_error")
+      }
+    }
+
+    if (data.type === "admin_effect") {
+      if (data.effect === "freeze") {
+        window.playerFrozen = Boolean(data.active)
+      }
+      if (data.effect === "kick") {
+        alert("Du wurdest vom Admin gekickt.")
+      }
+      if (data.effect === "ban") {
+        alert("Du wurdest vom Admin gebannt.")
+      }
     }
   }
 
@@ -463,6 +511,20 @@ function requestMineRock(objectId) {
   }))
 }
 
+function requestWaterTree(objectId) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "action_water_tree",
+    data: {
+      object_id: objectId,
+      x: player.position.x,
+      y: player.position.y,
+      z: player.position.z
+    }
+  }))
+}
+
 function requestPlaceWorkbench() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
 
@@ -477,13 +539,28 @@ function requestPlaceWorkbench() {
   }))
 }
 
-function requestInventoryAction(action) {
+function requestInventoryAction(action, data = null) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
 
-  ws.send(JSON.stringify({
+  const payload = {
     type: "inventory_action",
     action
-  }))
+  }
+
+  if (data && typeof data === "object") {
+    payload.data = data
+  }
+
+  ws.send(JSON.stringify(payload))
+}
+
+function requestPlantTreeSeed() {
+  requestInventoryAction("plant_tree_seed", {
+    x: player.position.x,
+    y: player.position.y,
+    z: player.position.z,
+    facing: player.rotation.y
+  })
 }
 
 function requestInventoryTransform(consumes, produces) {
@@ -494,6 +571,35 @@ function requestInventoryTransform(consumes, produces) {
     consumes,
     produces
   }))
+}
+
+function requestAdminAuth(pin) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  ws.send(JSON.stringify({
+    type: "admin_auth",
+    pin: String(pin || "")
+  }))
+}
+
+function requestAdminAction(action, targetUid) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  ws.send(JSON.stringify({
+    type: "admin_action",
+    action,
+    target_uid: Number(targetUid || 0)
+  }))
+}
+
+function requestAdminDropItem(item) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  ws.send(JSON.stringify({
+    type: "admin_drop_item",
+    item
+  }))
+}
+
+function getPlayersSnapshot() {
+  return { ...(players || {}) }
 }
 
 function saveGame() {
@@ -535,3 +641,11 @@ chatInput.addEventListener("blur", () => {
     closeChatInput()
   }
 })
+
+if (chatEmoteSelect) {
+  chatEmoteSelect.addEventListener("change", () => {
+    const emote = chatEmoteSelect.value || "smile"
+    setPlayerEmote(emote)
+    sendEmote(emote)
+  })
+}

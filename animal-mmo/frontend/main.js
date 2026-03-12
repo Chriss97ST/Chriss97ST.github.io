@@ -13,6 +13,13 @@ const touchSprint = document.getElementById("touchSprint")
 const touchJump = document.getElementById("touchJump")
 const touchChat = document.getElementById("touchChat")
 const touchPause = document.getElementById("touchPause")
+const adminWindow = document.getElementById("adminWindow")
+const adminAuthSection = document.getElementById("adminAuthSection")
+const adminControls = document.getElementById("adminControls")
+const adminStatus = document.getElementById("adminStatus")
+const adminPinInput = document.getElementById("adminPinInput")
+const adminPlayerSelect = document.getElementById("adminPlayerSelect")
+const adminDropItemSelect = document.getElementById("adminDropItemSelect")
 
 const authMessage = document.getElementById("authMessage")
 const tabLogin = document.getElementById("tabLogin")
@@ -32,12 +39,40 @@ window.touchSprintActive = false
 let touchPointerId = null
 let interactHoldTimer = null
 let activePlayersPinned = false
+let adminUnlocked = false
+window.playerFrozen = false
+
+function setKeyState(event, isDown) {
+  keys[event.code] = isDown
+
+  if (typeof event.key === "string" && event.key.length === 1) {
+    keys[event.key.toLowerCase()] = isDown
+    keys[event.key.toUpperCase()] = isDown
+  } else {
+    keys[event.key] = isDown
+  }
+}
+
+function clearMovementKeys() {
+  const tracked = [
+    "w", "a", "s", "d", "W", "A", "S", "D",
+    "Shift", "ShiftLeft", "ShiftRight", " ", "Space"
+  ]
+
+  for (const key of tracked) {
+    keys[key] = false
+  }
+}
 
 function isPauseMenuOpen() {
   return pauseMenu.style.display === "block"
 }
 
 function openPauseMenu() {
+  clearMovementKeys()
+  if (typeof closeChatInput === "function") {
+    closeChatInput()
+  }
   pauseMenu.style.display = "block"
 }
 
@@ -120,13 +155,41 @@ function isTouchDevice() {
 }
 
 function toggleInventory() {
-  if (inventoryUI.style.display === "none") {
-    closeWorkbenchCrafting()
-  }
-  inventoryUI.style.display = inventoryUI.style.display === "none" ? "block" : "none"
-  if (inventoryUI.style.display === "none") {
+  if (isPauseMenuOpen()) return
+
+  const currentlyOpen = inventoryUI.style.display === "block"
+
+  if (currentlyOpen) {
+    inventoryUI.style.display = "none"
     closeItemMenu()
     closeWorkbenchCrafting()
+    return
+  }
+
+  updateInventory()
+  inventoryUI.style.display = "block"
+}
+
+function ensurePauseMenuAdminButton() {
+  if (!pauseMenu) return
+  const existing = Array.from(pauseMenu.querySelectorAll("button")).find(
+    (btn) => (btn.textContent || "").trim().toLowerCase() === "adminbereich"
+  )
+  if (existing) return
+
+  const adminBtn = document.createElement("button")
+  adminBtn.type = "button"
+  adminBtn.textContent = "Adminbereich"
+  adminBtn.addEventListener("click", openAdminWindow)
+
+  const resumeBtn = Array.from(pauseMenu.querySelectorAll("button")).find(
+    (btn) => (btn.textContent || "").trim().toLowerCase() === "fortsetzen"
+  )
+
+  if (resumeBtn && resumeBtn.parentElement === pauseMenu) {
+    pauseMenu.insertBefore(adminBtn, resumeBtn)
+  } else {
+    pauseMenu.appendChild(adminBtn)
   }
 }
 
@@ -248,6 +311,7 @@ function setupTouchControls() {
   touchChat.addEventListener("pointerdown", (event) => {
     event.preventDefault()
     if (!gameActive) return
+    if (isPauseMenuOpen()) return
     openChatInput()
   })
 
@@ -318,6 +382,11 @@ async function login(username, password, rememberChoice = null) {
   const data = await request("/login", { username, password })
 
   if (data.status !== "ok") {
+    if (data.message === "banned") {
+      showAuthMessage("Dieser Account wurde gebannt.", "error")
+      return
+    }
+
     if (rememberChoice === true) {
       clearRememberedLogin()
       if (rememberLogin) rememberLogin.checked = false
@@ -372,6 +441,11 @@ function init3D(data) {
   player.position.set(data.x, data.y, data.z)
   scene.add(player)
 
+  const emoteSelect = document.getElementById("chatEmoteSelect")
+  if (emoteSelect && typeof setPlayerEmote === "function") {
+    setPlayerEmote(emoteSelect.value || "smile")
+  }
+
   spawnAnimals()
 
   inventory = Array.isArray(data.inventory) ? data.inventory : []
@@ -397,8 +471,14 @@ function animate() {
 
   const delta = clock ? clock.getDelta() : 0.016
 
-  move()
-  physics()
+  const inputBlocked = isPauseMenuOpen() || Boolean(window.playerFrozen)
+
+  if (!inputBlocked) {
+    move()
+    physics()
+  } else {
+    setPlayerMovementState(false)
+  }
   updatePlayerAnimation(delta)
   updateRemotePlayers(delta)
   updateAnimals(delta)
@@ -419,8 +499,11 @@ document.addEventListener("keydown", (e) => {
     return
   }
 
-  keys[e.key] = true
-  keys[e.code] = true
+  if (isPauseMenuOpen() && e.key !== "Escape") {
+    return
+  }
+
+  setKeyState(e, true)
 
   if (e.key === "i") {
     toggleInventory()
@@ -437,6 +520,7 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "t" || e.key === "T") {
     e.preventDefault()
+    if (isPauseMenuOpen()) return
     openChatInput()
   }
 })
@@ -453,11 +537,26 @@ document.addEventListener("keyup", (e) => {
     return
   }
 
-  keys[e.key] = false
-  keys[e.code] = false
+  setKeyState(e, false)
+})
+
+window.addEventListener("blur", () => {
+  clearMovementKeys()
+})
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    clearMovementKeys()
+  }
 })
 
 game.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse" && event.button === 2) {
+    if (ui.style.display !== "none") return
+    handleWorldRightClick(event, camera, game)
+    return
+  }
+
   if (event.pointerType === "mouse" && event.button !== 0) return
   if (ui.style.display !== "none") return
 
@@ -466,6 +565,10 @@ game.addEventListener("pointerdown", (event) => {
   }
 
   handleWorldLeftClick(event, camera, game)
+})
+
+game.addEventListener("contextmenu", (event) => {
+  event.preventDefault()
 })
 
 window.addEventListener("resize", () => {
@@ -510,6 +613,7 @@ tabLogin.addEventListener("click", () => setAuthMode("login"))
 tabRegister.addEventListener("click", () => setAuthMode("register"))
 setupTouchControls()
 resetTouchMove()
+ensurePauseMenuAdminButton()
 
 const remembered = loadRememberedLogin()
 if (remembered) {
@@ -521,4 +625,98 @@ if (remembered) {
 
 function resume() {
   closePauseMenu()
+}
+
+function setAdminStatus(text) {
+  if (adminStatus) adminStatus.textContent = text || ""
+}
+
+function refreshAdminPlayerSelect() {
+  if (!adminPlayerSelect || typeof getPlayersSnapshot !== "function") return
+  const snapshot = getPlayersSnapshot()
+  adminPlayerSelect.innerHTML = ""
+
+  for (const [uid, info] of Object.entries(snapshot)) {
+    if (Number(uid) === Number(myPlayerId)) continue
+    const option = document.createElement("option")
+    option.value = uid
+    option.textContent = `${info.name || `Player${uid}`} (#${uid})`
+    adminPlayerSelect.appendChild(option)
+  }
+}
+
+function openAdminWindow() {
+  if (!adminWindow) return
+  adminWindow.style.display = "flex"
+  refreshAdminPlayerSelect()
+  if (!adminUnlocked) {
+    adminAuthSection.style.display = "block"
+    adminControls.style.display = "none"
+    setAdminStatus("")
+  } else {
+    adminAuthSection.style.display = "none"
+    adminControls.style.display = "block"
+  }
+}
+
+function closeAdminWindow() {
+  if (!adminWindow) return
+  adminWindow.style.display = "none"
+}
+
+function submitAdminPin() {
+  const pin = (adminPinInput?.value || "").trim()
+  if (!pin) {
+    setAdminStatus("Bitte PIN eingeben.")
+    return
+  }
+  requestAdminAuth(pin)
+}
+
+function adminDoAction(action) {
+  const targetUid = Number(adminPlayerSelect?.value || 0)
+  if (!targetUid) {
+    setAdminStatus("Bitte einen Spieler wählen.")
+    return
+  }
+  requestAdminAction(action, targetUid)
+}
+
+function adminDropSelectedItem() {
+  const item = String(adminDropItemSelect?.value || "").trim()
+  if (!item) {
+    setAdminStatus("Bitte Item wählen.")
+    return
+  }
+  requestAdminDropItem(item)
+}
+
+function onAdminAuthResult(ok) {
+  if (!ok) {
+    adminUnlocked = false
+    setAdminStatus("PIN falsch.")
+    return
+  }
+  adminUnlocked = true
+  if (adminAuthSection) adminAuthSection.style.display = "none"
+  if (adminControls) adminControls.style.display = "block"
+  if (adminPinInput) adminPinInput.value = ""
+  refreshAdminPlayerSelect()
+  setAdminStatus("Adminbereich freigeschaltet.")
+}
+
+function onAdminActionResult(data) {
+  const action = data?.action || "action"
+  if (action === "freeze") {
+    setAdminStatus(`Freeze ${data.active ? "aktiv" : "deaktiviert"} fuer Spieler #${data.target_uid}.`)
+  } else if (action === "drop_item") {
+    setAdminStatus(`Item ${data.item} wurde gedroppt.`)
+  } else {
+    setAdminStatus(`${action} fuer Spieler #${data.target_uid} ausgefuehrt.`)
+  }
+  refreshAdminPlayerSelect()
+}
+
+function onAdminError(message) {
+  setAdminStatus(`Adminfehler: ${message}`)
 }

@@ -62,6 +62,14 @@
 
 <div id="chatUI" class="chat-ui">
   <div id="chatMessages" class="chat-messages"></div>
+  <select id="chatEmoteSelect" class="chat-emote-select" aria-label="Emote auswählen">
+    <option value="smile">🙂 Lächeln</option>
+    <option value="happy">😄 Fröhlich</option>
+    <option value="angry">😠 Wütend</option>
+    <option value="sad">😢 Traurig</option>
+    <option value="wink">😉 Zwinkern</option>
+    <option value="surprised">😮 Erstaunt</option>
+  </select>
   <input id="chatInput" class="chat-input" maxlength="180" placeholder="Nachricht eingeben und Enter druecken...">
 </div>
 
@@ -69,14 +77,56 @@
 
 <div id="pauseMenu">
   <button onclick="toggleActivePlayersPanel()">Aktive Spieler</button>
+  <button onclick="openAdminWindow()">Adminbereich</button>
   <button onclick="resume()">Fortsetzen</button>
   <button class="pause-menu-logout" onclick="logout()">Logout</button>
+</div>
+
+<div id="adminWindow" class="admin-window" style="display:none;">
+  <div class="admin-panel">
+    <div class="admin-head">
+      <h3>Adminbereich</h3>
+      <button class="admin-close" onclick="closeAdminWindow()">X</button>
+    </div>
+
+    <div id="adminAuthSection">
+      <p class="admin-note">PIN erforderlich</p>
+      <input id="adminPinInput" type="password" maxlength="8" placeholder="Admin PIN">
+      <button onclick="submitAdminPin()">Freischalten</button>
+    </div>
+
+    <div id="adminControls" style="display:none;">
+      <label for="adminPlayerSelect">Spieler</label>
+      <select id="adminPlayerSelect"></select>
+      <div class="admin-row">
+        <button onclick="adminDoAction('freeze')">Freeze/Unfreeze</button>
+        <button onclick="adminDoAction('kick')">Kick</button>
+        <button onclick="adminDoAction('ban')">Ban</button>
+      </div>
+
+      <label for="adminDropItemSelect">Item droppen</label>
+      <select id="adminDropItemSelect">
+        <option value="fruit">Frucht</option>
+        <option value="log">Holzstamm</option>
+        <option value="stone">Stein</option>
+        <option value="tree_seed">Baumsamen</option>
+        <option value="holzlatte">Holzlatte</option>
+        <option value="stock">Stock</option>
+        <option value="werkbank">Werkbank</option>
+        <option value="holzspitzhacke">Holzspitzhacke</option>
+        <option value="steinspitzhacke">Steinspitzhacke</option>
+      </select>
+      <button onclick="adminDropSelectedItem()">Drop Item</button>
+    </div>
+
+    <p id="adminStatus" class="admin-status"></p>
+  </div>
 </div>
 
 <div id="mobileControls" class="mobile-controls">
   <div class="mobile-top-right">
     <button id="touchChat" class="touch-btn touch-btn-small" type="button">Chat</button>
-    <button id="touchPause" class="touch-btn touch-btn-small" type="button">Pause</button>
+    <button id="touchPause" class="touch-btn touch-btn-small" type="button">Menü</button>
   </div>
 
   <div class="mobile-left">

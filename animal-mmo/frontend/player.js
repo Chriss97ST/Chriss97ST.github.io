@@ -20,7 +20,10 @@ const itemMeta = {
   werkbank: { key: "werkbank", label: "Werkbank", icon: "🧰" },
   stock: { key: "stock", label: "Stock", icon: "🪵" },
   holzspitzhacke: { key: "holzspitzhacke", label: "Holzspitzhacke", icon: "⛏️" },
-  steinspitzhacke: { key: "steinspitzhacke", label: "Steinspitzhacke", icon: "⛏️" }
+  steinspitzhacke: { key: "steinspitzhacke", label: "Steinspitzhacke", icon: "⛏️" },
+  tree_seed: { key: "baumsamen", label: "Baumsamen", icon: "🌱" },
+  treeseed: { key: "baumsamen", label: "Baumsamen", icon: "🌱" },
+  baumsamen: { key: "baumsamen", label: "Baumsamen", icon: "🌱" }
 }
 
 const workbenchRecipes = [
@@ -59,13 +62,19 @@ function itemIcon(item) {
   return itemMeta[item]?.icon || "📦"
 }
 
-function createSmileyTexture() {
-  const canvas = document.createElement("canvas")
-  canvas.width = 128
-  canvas.height = 128
-  const ctx = canvas.getContext("2d")
+const allowedEmotes = new Set(["smile", "happy", "angry", "sad", "wink", "surprised"])
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
+function normalizeEmote(emote) {
+  const key = String(emote || "smile").trim().toLowerCase()
+  return allowedEmotes.has(key) ? key : "smile"
+}
+
+function drawFaceEmote(ctx, emote) {
+  const e = normalizeEmote(emote)
+  const w = ctx.canvas.width
+  const h = ctx.canvas.height
+
+  ctx.clearRect(0, 0, w, h)
 
   ctx.fillStyle = "#ffd54f"
   ctx.beginPath()
@@ -73,21 +82,105 @@ function createSmileyTexture() {
   ctx.fill()
 
   ctx.fillStyle = "#2b2b2b"
-  ctx.beginPath()
-  ctx.arc(46, 52, 9, 0, Math.PI * 2)
-  ctx.arc(82, 52, 9, 0, Math.PI * 2)
-  ctx.fill()
 
-  ctx.strokeStyle = "#2b2b2b"
+  if (e === "wink") {
+    ctx.beginPath()
+    ctx.arc(46, 52, 9, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.strokeStyle = "#2b2b2b"
+    ctx.lineWidth = 8
+    ctx.lineCap = "round"
+    ctx.beginPath()
+    ctx.moveTo(74, 52)
+    ctx.lineTo(89, 52)
+    ctx.stroke()
+  } else if (e === "surprised") {
+    ctx.beginPath()
+    ctx.arc(46, 50, 9, 0, Math.PI * 2)
+    ctx.arc(82, 50, 9, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (e === "sad") {
+    ctx.beginPath()
+    ctx.arc(46, 50, 8, 0, Math.PI * 2)
+    ctx.arc(82, 50, 8, 0, Math.PI * 2)
+    ctx.fill()
+  } else {
+    ctx.beginPath()
+    ctx.arc(46, 52, 9, 0, Math.PI * 2)
+    ctx.arc(82, 52, 9, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  ctx.strokeStyle = e === "angry" ? "#7a1414" : "#2b2b2b"
   ctx.lineWidth = 10
   ctx.lineCap = "round"
+
+  if (e === "surprised") {
+    ctx.beginPath()
+    ctx.arc(64, 76, 11, 0, Math.PI * 2)
+    ctx.stroke()
+    return
+  }
+
+  if (e === "sad") {
+    ctx.beginPath()
+    ctx.arc(64, 90, 20, 1.1 * Math.PI, 1.9 * Math.PI)
+    ctx.stroke()
+    return
+  }
+
+  if (e === "happy") {
+    ctx.beginPath()
+    ctx.arc(64, 66, 30, 0.1 * Math.PI, 0.9 * Math.PI)
+    ctx.stroke()
+    return
+  }
+
+  if (e === "angry") {
+    ctx.lineWidth = 7
+    ctx.beginPath()
+    ctx.moveTo(34, 38)
+    ctx.lineTo(49, 45)
+    ctx.moveTo(94, 38)
+    ctx.lineTo(79, 45)
+    ctx.stroke()
+    ctx.lineWidth = 10
+    ctx.beginPath()
+    ctx.arc(64, 85, 19, 1.15 * Math.PI, 1.85 * Math.PI)
+    ctx.stroke()
+    return
+  }
+
   ctx.beginPath()
   ctx.arc(64, 70, 26, 0.15 * Math.PI, 0.85 * Math.PI)
   ctx.stroke()
+}
+
+function createFaceTexture(emote = "smile") {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 128
+  const ctx = canvas.getContext("2d")
+  drawFaceEmote(ctx, emote)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.needsUpdate = true
-  return texture
+  return { texture, canvas, ctx }
+}
+
+function setModelFaceEmote(model, emote) {
+  if (!model || !model.userData || !model.userData.faceCtx || !model.userData.faceTexture) return
+  const normalized = normalizeEmote(emote)
+  if (model.userData.faceEmote === normalized) return
+  drawFaceEmote(model.userData.faceCtx, normalized)
+  model.userData.faceTexture.needsUpdate = true
+  model.userData.faceEmote = normalized
+}
+
+function setPlayerEmote(emote) {
+  if (!player) return
+  setModelFaceEmote(player, emote)
 }
 
 function createPlayerModel() {
@@ -102,9 +195,9 @@ function createPlayerModel() {
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skin)
   head.position.y = 1.18
 
-  const faceTexture = createSmileyTexture()
+  const faceData = createFaceTexture("smile")
   const faceMaterial = new THREE.MeshBasicMaterial({
-    map: faceTexture,
+    map: faceData.texture,
     transparent: true
   })
   const face = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.58), faceMaterial)
@@ -139,6 +232,11 @@ function createPlayerModel() {
     torso,
     head
   }
+
+  group.userData.faceTexture = faceData.texture
+  group.userData.faceCanvas = faceData.canvas
+  group.userData.faceCtx = faceData.ctx
+  group.userData.faceEmote = "smile"
 
   group.userData.collisionRadius = 0.65
   return group
@@ -330,6 +428,13 @@ function buildItemOptions(item) {
     options.push({
       label: "Aufstellen",
       action: () => requestPlaceWorkbench()
+    })
+  }
+
+  if (item === "baumsamen") {
+    options.push({
+      label: "Einpflanzen",
+      action: () => requestPlantTreeSeed()
     })
   }
 

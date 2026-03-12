@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from database import (
+    is_user_banned,
     create_user,
     get_user_id_by_credentials,
     get_user_position,
@@ -32,6 +33,10 @@ def login(data: AuthRequest):
     uid = get_user_id_by_credentials(data.username, data.password)
     if uid is None:
         return {"status": "error", "message": "invalid_credentials"}
+
+    if is_user_banned(uid):
+        return {"status": "error", "message": "banned"}
+
     pos = get_user_position(uid)
     inventory = load_inventory(uid)
 
