@@ -85,6 +85,7 @@ with state_lock:
             x REAL NOT NULL,
             y REAL NOT NULL,
             z REAL NOT NULL,
+            equipped_item TEXT DEFAULT '',
             emote TEXT DEFAULT 'smile',
             typing INTEGER DEFAULT 0,
             last_seen REAL NOT NULL
@@ -106,6 +107,10 @@ def _ensure_live_player_columns():
 
         if "emote" not in existing:
             state_conn.execute("ALTER TABLE live_players ADD COLUMN emote TEXT DEFAULT 'smile'")
+            state_conn.commit()
+
+        if "equipped_item" not in existing:
+            state_conn.execute("ALTER TABLE live_players ADD COLUMN equipped_item TEXT DEFAULT ''")
             state_conn.commit()
 
 with inventory_lock:
@@ -194,7 +199,19 @@ with world_lock:
         """
     )
     world_conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chest_items(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chest_id INTEGER NOT NULL,
+            item TEXT NOT NULL
+        )
+        """
+    )
+    world_conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_world_events_id ON world_events(id)"
+    )
+    world_conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chest_items_chest_item ON chest_items(chest_id, item)"
     )
     world_conn.commit()
 
@@ -213,6 +230,7 @@ def _ensure_world_object_columns():
             ("height_scale", "REAL DEFAULT 1"),
             ("growth_stage", "INTEGER DEFAULT 2"),
             ("planted_fresh", "INTEGER DEFAULT 0"),
+            ("tree_damage", "REAL DEFAULT 0"),
         ]
 
         changed = False
@@ -235,11 +253,23 @@ def _get_or_create_world_seed():
     if row:
         return int(row["value"])
 
+    # Multiprocess uvicorn startup can race here. INSERT OR IGNORE keeps this idempotent.
     seed = secrets.randbits(63)
     world_conn.execute(
-        "INSERT INTO world_meta(key,value) VALUES(?,?)",
+        "INSERT OR IGNORE INTO world_meta(key,value) VALUES(?,?)",
         (WORLD_SEED_KEY, str(seed))
     )
+    world_conn.commit()
+
+    row = world_conn.execute(
+        "SELECT value FROM world_meta WHERE key=?",
+        (WORLD_SEED_KEY,)
+    ).fetchone()
+
+    if row:
+        return int(row["value"])
+
+    # Defensive fallback if DB returned no row after INSERT OR IGNORE.
     return seed
 
 
@@ -576,7 +606,7 @@ def advance_animals_state(max_dt: float = 0.06):
                 """
                 SELECT kind,x,z,scale,COALESCE(height_scale,1.0) AS height_scale
                 FROM world_objects
-                WHERE kind IN ('tree','rock','workbench','pond','river')
+                WHERE kind IN ('tree','rock','workbench','chest','pond','river')
                 """
             ).fetchall()
             obstacles = []
@@ -913,6 +943,7 @@ def upsert_live_player(
     x: float,
     y: float,
     z: float,
+    equipped_item: str = "",
     emote: str = "smile",
     typing: bool = False
 ):
@@ -920,19 +951,20 @@ def upsert_live_player(
     with state_lock:
         state_conn.execute(
             """
-            INSERT INTO live_players(user_id,session_id,name,x,y,z,emote,typing,last_seen)
-            VALUES(?,?,?,?,?,?,?,?,?)
+            INSERT INTO live_players(user_id,session_id,name,x,y,z,equipped_item,emote,typing,last_seen)
+            VALUES(?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(user_id) DO UPDATE SET
                 session_id=excluded.session_id,
                 name=excluded.name,
                 x=excluded.x,
                 y=excluded.y,
                 z=excluded.z,
+                equipped_item=excluded.equipped_item,
                 emote=excluded.emote,
                 typing=excluded.typing,
                 last_seen=excluded.last_seen
             """,
-            (uid, session_id, name, x, y, z, emote, 1 if typing else 0, now)
+            (uid, session_id, name, x, y, z, equipped_item, emote, 1 if typing else 0, now)
         )
         state_conn.commit()
 
@@ -980,6 +1012,32 @@ def set_live_player_emote(uid: int, session_id: str, emote: str):
         state_conn.commit()
 
 
+def set_live_player_equipped_item(uid: int, session_id: str, item: str):
+    safe_item = str(item or "").strip()[:32]
+    now = time.time()
+    with state_lock:
+        state_conn.execute(
+            """
+            UPDATE live_players
+            SET equipped_item=?, last_seen=?
+            WHERE user_id=? AND session_id=?
+            """,
+            (safe_item, now, uid, session_id)
+        )
+        state_conn.commit()
+
+
+def get_live_player_equipped_item(uid: int):
+    with state_lock:
+        row = state_conn.execute(
+            "SELECT equipped_item FROM live_players WHERE user_id=? LIMIT 1",
+            (uid,)
+        ).fetchone()
+    if not row:
+        return ""
+    return str(row["equipped_item"] or "")
+
+
 def touch_live_player(uid: int, session_id: str):
     now = time.time()
     with state_lock:
@@ -1012,7 +1070,7 @@ def prune_stale_live_players(max_age_seconds: float = 12.0):
 def get_live_players_snapshot():
     with state_lock:
         rows = state_conn.execute(
-            "SELECT user_id,name,x,y,z,emote,typing FROM live_players"
+            "SELECT user_id,name,x,y,z,equipped_item,emote,typing FROM live_players"
         ).fetchall()
 
     snapshot = {}
@@ -1022,6 +1080,7 @@ def get_live_players_snapshot():
             "y": row["y"],
             "z": row["z"],
             "name": row["name"],
+            "equipped_item": row["equipped_item"] or "",
             "emote": row["emote"] or "smile",
             "typing": bool(row["typing"])
         }
@@ -1152,6 +1211,35 @@ def nearest_tree(px: float, pz: float):
     return (row["id"], row["x"], row["y"], row["z"], row["fruit_count"], row["dist2"])
 
 
+def nearest_water_source(px: float, pz: float):
+    with world_lock:
+        row = world_conn.execute(
+            """
+            SELECT
+                id,kind,x,z,scale,COALESCE(height_scale,1.0) AS height_scale,
+                ((x-?)*(x-?)+(z-?)*(z-?)) AS dist2
+            FROM world_objects
+            WHERE kind IN ('pond','river')
+            ORDER BY dist2 ASC
+            LIMIT 1
+            """,
+            (px, px, pz, pz)
+        ).fetchone()
+
+    if not row:
+        return None
+
+    radius = 2.2 * row["scale"] if row["kind"] == "pond" else max(2.4 * row["scale"], 0.85 * float(row["height_scale"]))
+    return {
+        "id": int(row["id"]),
+        "kind": row["kind"],
+        "x": row["x"],
+        "z": row["z"],
+        "radius": radius,
+        "dist2": row["dist2"],
+    }
+
+
 def find_world_object_by_id(obj_id: int, kind: str):
     with world_lock:
         row = world_conn.execute(
@@ -1163,7 +1251,8 @@ def find_world_object_by_id(obj_id: int, kind: str):
                 COALESCE(trunk_scale,1) AS trunk_scale,
                 COALESCE(height_scale,1) AS height_scale,
                 COALESCE(growth_stage,2) AS growth_stage,
-                COALESCE(planted_fresh,0) AS planted_fresh
+                COALESCE(planted_fresh,0) AS planted_fresh,
+                COALESCE(tree_damage,0) AS tree_damage
             FROM world_objects
             WHERE id=? AND kind=?
             """,
@@ -1186,6 +1275,7 @@ def find_world_object_by_id(obj_id: int, kind: str):
         "height_scale": row["height_scale"],
         "growth_stage": row["growth_stage"],
         "planted_fresh": row["planted_fresh"],
+        "tree_damage": row["tree_damage"],
     }
 
 
@@ -1318,6 +1408,52 @@ def remove_object_and_spawn(
             raise
 
 
+def apply_tree_chop_hit(tree_id: int, damage_amount: float, required_damage: float):
+    damage_amount = max(0.0, float(damage_amount))
+    required_damage = max(0.1, float(required_damage))
+
+    with world_lock:
+        world_conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = world_conn.execute(
+                """
+                SELECT id,x,y,z,COALESCE(tree_damage,0) AS tree_damage
+                FROM world_objects
+                WHERE id=? AND kind='tree'
+                """,
+                (tree_id,)
+            ).fetchone()
+            if not row:
+                world_conn.rollback()
+                return None
+
+            new_damage = float(row["tree_damage"]) + damage_amount
+            if new_damage < required_damage:
+                world_conn.execute(
+                    "UPDATE world_objects SET tree_damage=? WHERE id=?",
+                    (new_damage, tree_id)
+                )
+                world_conn.commit()
+                return {
+                    "destroyed": False,
+                    "damage": new_damage,
+                    "required": required_damage,
+                }
+
+            world_conn.execute("DELETE FROM world_objects WHERE id=?", (tree_id,))
+            world_conn.commit()
+            return {
+                "destroyed": True,
+                "x": row["x"],
+                "y": row["y"],
+                "z": row["z"],
+                "required": required_damage,
+            }
+        except Exception:
+            world_conn.rollback()
+            raise
+
+
 def place_workbench_at(px: float, pz: float, facing: float):
     place_x = px + math.sin(facing) * 1.7
     place_z = pz + math.cos(facing) * 1.7
@@ -1345,13 +1481,98 @@ def place_workbench_at(px: float, pz: float, facing: float):
     }
 
 
+def place_chest_at(px: float, pz: float, facing: float):
+    place_x = px + math.sin(facing) * 1.7
+    place_z = pz + math.cos(facing) * 1.7
+
+    place_x = max(-94, min(94, place_x))
+    place_z = max(-94, min(94, place_z))
+
+    with world_lock:
+        cur = world_conn.execute(
+            "INSERT INTO world_objects(kind,x,y,z,rotation,scale,fruit_count) VALUES(?,?,?,?,?,?,?)",
+            ("chest", place_x, 0.45, place_z, facing, 1.0, 0)
+        )
+        world_conn.commit()
+        obj_id = cur.lastrowid
+
+    return {
+        "id": obj_id,
+        "kind": "chest",
+        "x": place_x,
+        "y": 0.45,
+        "z": place_z,
+        "rotation": facing,
+        "scale": 1.0,
+        "fruit_count": 0
+    }
+
+
+def load_chest_inventory(chest_id: int):
+    with world_lock:
+        rows = world_conn.execute(
+            "SELECT item FROM chest_items WHERE chest_id=?",
+            (chest_id,)
+        ).fetchall()
+    return [r["item"] for r in rows]
+
+
+def add_chest_item(chest_id: int, item: str, amount: int = 1):
+    safe_item = str(item or "").strip()
+    if not safe_item or amount <= 0:
+        return 0
+
+    inserted = 0
+    with world_lock:
+        for _ in range(int(amount)):
+            world_conn.execute(
+                "INSERT INTO chest_items(chest_id,item) VALUES(?,?)",
+                (chest_id, safe_item)
+            )
+            inserted += 1
+        world_conn.commit()
+    return inserted
+
+
+def remove_chest_item(chest_id: int, item: str, amount: int = 1):
+    safe_item = str(item or "").strip()
+    if not safe_item or amount <= 0:
+        return 0
+
+    removed = 0
+    with world_lock:
+        for _ in range(int(amount)):
+            row = world_conn.execute(
+                "SELECT id FROM chest_items WHERE chest_id=? AND item=? LIMIT 1",
+                (chest_id, safe_item)
+            ).fetchone()
+            if not row:
+                break
+            world_conn.execute("DELETE FROM chest_items WHERE id=?", (row["id"],))
+            removed += 1
+        world_conn.commit()
+    return removed
+
+
+def count_chest_item(chest_id: int, item: str):
+    safe_item = str(item or "").strip()
+    if not safe_item:
+        return 0
+    with world_lock:
+        row = world_conn.execute(
+            "SELECT COUNT(*) AS cnt FROM chest_items WHERE chest_id=? AND item=?",
+            (chest_id, safe_item)
+        ).fetchone()
+    return int(row["cnt"] if row else 0)
+
+
 def get_world_obstacles():
     with world_lock:
         rows = world_conn.execute(
             """
             SELECT kind,x,z,scale,COALESCE(growth_stage,2) AS growth_stage
             FROM world_objects
-            WHERE kind IN ('tree','rock','workbench')
+            WHERE kind IN ('tree','rock','workbench','chest')
             """
         ).fetchall()
 

@@ -242,6 +242,48 @@ function createWorkbenchMesh(obj) {
   })
 }
 
+function createChestMesh(obj) {
+  const group = new THREE.Group()
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.62, 0.72),
+    new THREE.MeshStandardMaterial({ color: 0x8c5a31, flatShading: true })
+  )
+  body.position.y = 0.26
+
+  const lid = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.34, 0.72),
+    new THREE.MeshStandardMaterial({ color: 0xa16a3c, flatShading: true })
+  )
+  lid.position.y = 0.74
+
+  const latch = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.16, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0xcda24e, flatShading: true })
+  )
+  latch.position.set(0, 0.52, 0.4)
+
+  group.add(body)
+  group.add(lid)
+  group.add(latch)
+
+  group.position.set(obj.x, obj.y, obj.z)
+  group.rotation.y = obj.rotation
+  group.userData.collisionRadius = 0.8
+  group.userData.worldObjectId = obj.id
+  group.userData.worldObjectKind = "chest"
+
+  scene.add(group)
+  objects.push(group)
+
+  worldObjectsById.set(obj.id, {
+    id: obj.id,
+    kind: obj.kind,
+    mesh: group,
+    fruitNodes: []
+  })
+}
+
 function createMeadowMesh(obj) {
   const group = new THREE.Group()
 
@@ -357,6 +399,8 @@ function addWorldObject(obj) {
     createRockMesh(obj)
   } else if (obj.kind === "workbench") {
     createWorkbenchMesh(obj)
+  } else if (obj.kind === "chest") {
+    createChestMesh(obj)
   } else if (obj.kind === "meadow") {
     createMeadowMesh(obj)
   } else if (obj.kind === "pond") {
@@ -488,11 +532,7 @@ function handleWorldLeftClick(event, camera, canvas) {
     if (!worldObject) continue
 
     if (worldObject.kind === "tree") {
-      if (event.shiftKey) {
-        requestWaterTree(worldObject.id)
-      } else {
-        requestChopTree(worldObject.id)
-      }
+      requestChopTree(worldObject.id)
       break
     }
 
@@ -503,6 +543,11 @@ function handleWorldLeftClick(event, camera, canvas) {
 
     if (worldObject.kind === "workbench") {
       openWorkbenchCrafting()
+      break
+    }
+
+    if (worldObject.kind === "chest") {
+      requestOpenChest(worldObject.id)
       break
     }
   }
@@ -523,7 +568,7 @@ function handleWorldRightClick(event, camera, canvas) {
     if (!worldObject) continue
     if (worldObject.kind !== "tree") continue
 
-    requestWaterTree(worldObject.id)
+    requestActionE()
     break
   }
 }
@@ -579,6 +624,10 @@ function applyWorldPatch(patch) {
   }
 
   if (patch.event === "workbench_added" && patch.object) {
+    addWorldObject(patch.object)
+  }
+
+  if (patch.event === "chest_added" && patch.object) {
     addWorldObject(patch.object)
   }
 

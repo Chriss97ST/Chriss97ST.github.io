@@ -374,6 +374,11 @@ input:focus {
   padding: 10px 12px;
 }
 
+.inventory-item.equipped {
+  border-color: rgba(126, 245, 189, 0.75);
+  box-shadow: 0 0 0 1px rgba(126, 245, 189, 0.4) inset;
+}
+
 .inventory-item-left {
   display: flex;
   align-items: center;
@@ -529,6 +534,17 @@ input:focus {
 
 .inventory-item-menu-btn:hover {
   background: rgba(67, 106, 140, 0.72);
+}
+
+.chest-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.chest-actions .inventory-item-menu-btn {
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12px;
 }
 
 #pauseMenu {

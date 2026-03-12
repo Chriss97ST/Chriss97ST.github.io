@@ -163,6 +163,9 @@ function toggleInventory() {
     inventoryUI.style.display = "none"
     closeItemMenu()
     closeWorkbenchCrafting()
+    if (typeof closeChestStorage === "function") {
+      closeChestStorage()
+    }
     return
   }
 
@@ -493,6 +496,12 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Tab" && gameActive) {
     e.preventDefault()
     setOnlineUsersVisible(true)
+  }
+
+  if (e.key === "Escape" && adminWindow && adminWindow.style.display !== "none") {
+    e.preventDefault()
+    closeAdminWindow()
+    return
   }
 
   if (typeof chatInput !== "undefined" && document.activeElement === chatInput) {

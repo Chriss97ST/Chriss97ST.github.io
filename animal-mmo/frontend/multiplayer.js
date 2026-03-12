@@ -180,6 +180,12 @@ function updateRemotePlayersSnapshot(snapshot) {
       setModelFaceEmote(entry.mesh, nextEmote)
       entry.emote = nextEmote
     }
+
+    const nextEquipped = String(info.equipped_item || "")
+    if (entry.equippedItem !== nextEquipped) {
+      setModelHeldItem(entry.mesh, nextEquipped)
+      entry.equippedItem = nextEquipped
+    }
   }
 
   for (const [uid, entry] of remotePlayers.entries()) {
@@ -351,7 +357,16 @@ function connectWS(id) {
 
     if (data.type === "inventory_update") {
       inventory = Array.isArray(data.inventory) ? data.inventory : []
+      if (typeof setEquippedItem === "function") {
+        setEquippedItem(data.equipped_item || "", false)
+      }
       updateInventory()
+    }
+
+    if (data.type === "chest_open") {
+      if (typeof setOpenChestState === "function") {
+        setOpenChestState(data.chest_id, data.items || [])
+      }
     }
 
     if (data.type === "chat") {
@@ -535,6 +550,50 @@ function requestPlaceWorkbench() {
       y: player.position.y,
       z: player.position.z,
       facing: player.rotation.y
+    }
+  }))
+}
+
+function requestPlaceChest() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "action_place_chest",
+    data: {
+      x: player.position.x,
+      y: player.position.y,
+      z: player.position.z,
+      facing: player.rotation.y
+    }
+  }))
+}
+
+function requestOpenChest(objectId) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "action_open_chest",
+    data: {
+      object_id: objectId,
+      x: player.position.x,
+      y: player.position.y,
+      z: player.position.z
+    }
+  }))
+}
+
+function requestChestAction(action, chestId, item, amount = 1) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+  ws.send(JSON.stringify({
+    type: "chest_action",
+    action,
+    data: {
+      chest_id: Number(chestId || 0),
+      item: String(item || ""),
+      amount: Number(amount || 1),
+      x: player.position.x,
+      z: player.position.z
     }
   }))
 }

@@ -7,8 +7,12 @@ let jumpQueued = false
 
 let inventory = []
 let workbenchCraftOpen = false
+let workbenchIgnoreOutsideClickUntil = 0
+let openChestId = 0
+let openChestItems = []
 const craftSlots2x2 = Array(4).fill(null)
 const craftSlots3x3 = Array(9).fill(null)
+let equippedItem = ""
 
 const itemMeta = {
   fruit: { key: "frucht", label: "Frucht", icon: "🍎" },
@@ -18,9 +22,13 @@ const itemMeta = {
   holzlatte: { key: "holzlatte", label: "Holzlatte", icon: "🪚" },
   stein: { key: "stein", label: "Stein", icon: "🪨" },
   werkbank: { key: "werkbank", label: "Werkbank", icon: "🧰" },
+  kiste: { key: "kiste", label: "Kiste", icon: "🧺" },
   stock: { key: "stock", label: "Stock", icon: "🪵" },
   holzspitzhacke: { key: "holzspitzhacke", label: "Holzspitzhacke", icon: "⛏️" },
   steinspitzhacke: { key: "steinspitzhacke", label: "Steinspitzhacke", icon: "⛏️" },
+  holzaxt: { key: "holzaxt", label: "Holzaxt", icon: "🪓" },
+  eimer_leer: { key: "eimer_leer", label: "Eimer (leer)", icon: "🪣" },
+  eimer_voll: { key: "eimer_voll", label: "Eimer (voll)", icon: "🪣" },
   tree_seed: { key: "baumsamen", label: "Baumsamen", icon: "🌱" },
   treeseed: { key: "baumsamen", label: "Baumsamen", icon: "🌱" },
   baumsamen: { key: "baumsamen", label: "Baumsamen", icon: "🌱" }
@@ -47,8 +55,145 @@ const workbenchRecipes = [
     pattern: ["stein", "stein", "stein", null, "stock", null, null, "stock", null],
     consumes: [{ item: "stein", amount: 3 }, { item: "stock", amount: 2 }],
     produces: [{ item: "steinspitzhacke", amount: 1 }]
+  },
+  {
+    id: "craft_wood_axe",
+    label: "Holzaxt",
+    pattern: ["holzlatte", "holzlatte", null, "holzlatte", "stock", null, null, "stock", null],
+    consumes: [{ item: "holzlatte", amount: 3 }, { item: "stock", amount: 2 }],
+    produces: [{ item: "holzaxt", amount: 1 }]
+  },
+  {
+    id: "craft_wood_axe_mirror",
+    label: "Holzaxt",
+    pattern: [null, "holzlatte", "holzlatte", null, "stock", "holzlatte", null, "stock", null],
+    consumes: [{ item: "holzlatte", amount: 3 }, { item: "stock", amount: 2 }],
+    produces: [{ item: "holzaxt", amount: 1 }]
+  },
+  {
+    id: "craft_bucket",
+    label: "Eimer (leer)",
+    pattern: ["holzlatte", null, "holzlatte", null, "stein", null, null, null, null],
+    consumes: [{ item: "holzlatte", amount: 2 }, { item: "stein", amount: 1 }],
+    produces: [{ item: "eimer_leer", amount: 1 }]
+  },
+  {
+    id: "craft_chest",
+    label: "Kiste",
+    pattern: ["holzlatte", "holzlatte", "holzlatte", "holzlatte", null, "holzlatte", "holzlatte", "holzlatte", "holzlatte"],
+    consumes: [{ item: "holzlatte", amount: 8 }],
+    produces: [{ item: "kiste", amount: 1 }]
   }
 ]
+
+const equippableItems = new Set(["holzspitzhacke", "steinspitzhacke", "holzaxt", "eimer_leer", "eimer_voll"])
+
+function getEquippedItem() {
+  return equippedItem
+}
+
+function createHeldItemMesh(item) {
+  if (item === "holzspitzhacke" || item === "steinspitzhacke") {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.04, 0.55, 8),
+      new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true })
+    )
+    handle.rotation.z = Math.PI * 0.35
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.34, 0.11, 0.09),
+      new THREE.MeshStandardMaterial({ color: item === "steinspitzhacke" ? 0x8a949e : 0xc9a67b, flatShading: true })
+    )
+    head.position.set(0.17, 0.16, 0)
+    head.rotation.z = Math.PI * 0.35
+    group.add(handle)
+    group.add(head)
+    return group
+  }
+
+  if (item === "holzaxt") {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.04, 0.55, 8),
+      new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true })
+    )
+    handle.rotation.z = Math.PI * 0.22
+    const blade = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.16, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xbec7d2, flatShading: true })
+    )
+    blade.position.set(0.12, 0.2, 0)
+    blade.rotation.z = Math.PI * 0.35
+    group.add(handle)
+    group.add(blade)
+    return group
+  }
+
+  if (item === "eimer_leer" || item === "eimer_voll") {
+    const group = new THREE.Group()
+    const bucket = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.16, 0.2, 10, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x949ba5, flatShading: true, side: THREE.DoubleSide })
+    )
+    bucket.rotation.x = Math.PI * 0.15
+    group.add(bucket)
+
+    if (item === "eimer_voll") {
+      const water = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.118, 0.118, 0.03, 10),
+        new THREE.MeshStandardMaterial({ color: 0x2f84c7, flatShading: true })
+      )
+      water.position.y = 0.04
+      group.add(water)
+    }
+
+    return group
+  }
+
+  return null
+}
+
+function setModelHeldItem(model, item) {
+  if (!model || !model.userData || !model.userData.handAnchor) return
+
+  if (model.userData.heldItemMesh) {
+    model.userData.handAnchor.remove(model.userData.heldItemMesh)
+    model.userData.heldItemMesh = null
+  }
+
+  const normalized = normalizeItem(item)
+  if (!normalized || !equippableItems.has(normalized)) {
+    model.userData.heldItem = ""
+    return
+  }
+
+  const mesh = createHeldItemMesh(normalized)
+  if (!mesh) {
+    model.userData.heldItem = ""
+    return
+  }
+
+  if (normalized === "holzspitzhacke" || normalized === "steinspitzhacke" || normalized === "holzaxt") {
+    // Flip tool orientation so the hand grips the handle end, not the tool head.
+    mesh.position.set(0.02, -0.3, 0.03)
+    mesh.rotation.set(0.2, -0.15, Math.PI + 0.5)
+  } else {
+    mesh.position.set(0.08, -0.34, 0.03)
+    mesh.rotation.set(0.2, -0.15, 0.5)
+  }
+  model.userData.handAnchor.add(mesh)
+  model.userData.heldItemMesh = mesh
+  model.userData.heldItem = normalized
+}
+
+function setEquippedItem(item, syncInventory = true) {
+  const normalized = normalizeItem(item)
+  equippedItem = equippableItems.has(normalized) ? normalized : ""
+  setModelHeldItem(player, equippedItem)
+  if (syncInventory) {
+    updateInventory()
+  }
+}
 
 function normalizeItem(item) {
   return itemMeta[item]?.key || item
@@ -210,6 +355,10 @@ function createPlayerModel() {
   const armR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), skin)
   armR.position.set(0.66, 0.14, 0)
 
+  const handAnchor = new THREE.Group()
+  handAnchor.position.set(0.02, -0.38, 0.08)
+  armR.add(handAnchor)
+
   const legL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.0, 0.3), dark)
   legL.position.set(-0.23, -0.86, 0)
 
@@ -237,6 +386,9 @@ function createPlayerModel() {
   group.userData.faceCanvas = faceData.canvas
   group.userData.faceCtx = faceData.ctx
   group.userData.faceEmote = "smile"
+  group.userData.handAnchor = handAnchor
+  group.userData.heldItem = ""
+  group.userData.heldItemMesh = null
 
   group.userData.collisionRadius = 0.65
   return group
@@ -401,13 +553,49 @@ function closeWorkbenchCrafting() {
   updateInventory()
 }
 
+function closeWorkbenchAndInventory() {
+  workbenchCraftOpen = false
+  workbenchIgnoreOutsideClickUntil = 0
+  openChestId = 0
+  openChestItems = []
+  closeItemMenu()
+  inventoryUI.style.display = "none"
+  updateInventory()
+}
+
 function openWorkbenchCrafting() {
   workbenchCraftOpen = true
+  openChestId = 0
+  openChestItems = []
+  workbenchIgnoreOutsideClickUntil = Date.now() + 220
   inventoryUI.style.display = "block"
   updateInventory()
 }
 
-function buildItemOptions(item) {
+function setOpenChestState(chestId, items) {
+  const nextId = Number(chestId || 0)
+  if (!nextId) {
+    openChestId = 0
+    openChestItems = []
+    updateInventory()
+    return
+  }
+
+  openChestId = nextId
+  openChestItems = Array.isArray(items) ? items.map((raw) => normalizeItem(raw)) : []
+  workbenchCraftOpen = false
+  inventoryUI.style.display = "block"
+  updateInventory()
+}
+
+function closeChestStorage() {
+  if (!openChestId && openChestItems.length === 0) return
+  openChestId = 0
+  openChestItems = []
+  updateInventory()
+}
+
+function buildItemOptions(item, amount = 1) {
   const options = []
 
   if (item === "frucht") {
@@ -422,12 +610,26 @@ function buildItemOptions(item) {
       label: "Zu Holzlatten verarbeiten",
       action: () => requestInventoryAction("craft_planks")
     })
+
+    if (amount > 1) {
+      options.push({
+        label: `Stack verarbeiten (x${amount})`,
+        action: () => requestInventoryAction("craft_planks_all")
+      })
+    }
   }
 
   if (item === "werkbank") {
     options.push({
       label: "Aufstellen",
       action: () => requestPlaceWorkbench()
+    })
+  }
+
+  if (item === "kiste") {
+    options.push({
+      label: "Aufstellen",
+      action: () => requestPlaceChest()
     })
   }
 
@@ -438,13 +640,41 @@ function buildItemOptions(item) {
     })
   }
 
+  if (openChestId) {
+    options.push({
+      label: "In Kiste legen",
+      action: () => requestChestAction("store_one", openChestId, item, 1)
+    })
+
+    if (amount > 1) {
+      options.push({
+        label: `Stack einlagern (x${amount})`,
+        action: () => requestChestAction("store_all", openChestId, item, amount)
+      })
+    }
+  }
+
+  if (equippableItems.has(item)) {
+    if (equippedItem === item) {
+      options.push({
+        label: "Ablegen",
+        action: () => requestInventoryAction("unequip_item")
+      })
+    } else {
+      options.push({
+        label: "Ausrüsten",
+        action: () => requestInventoryAction("equip_item", { item })
+      })
+    }
+  }
+
   return options
 }
 
-function openItemMenu(anchor, item) {
+function openItemMenu(anchor, item, amount = 1) {
   closeItemMenu()
 
-  const options = buildItemOptions(item)
+  const options = buildItemOptions(item, amount)
   if (options.length === 0) return
 
   const menu = document.createElement("div")
@@ -584,7 +814,7 @@ function renderWorkbenchSection(parent) {
   closeBtn.type = "button"
   closeBtn.className = "craft-close-btn"
   closeBtn.textContent = "Schließen"
-  closeBtn.addEventListener("click", closeWorkbenchCrafting)
+  closeBtn.addEventListener("click", closeWorkbenchAndInventory)
 
   head.appendChild(title)
   head.appendChild(closeBtn)
@@ -626,6 +856,101 @@ function renderWorkbenchSection(parent) {
   parent.appendChild(section)
 }
 
+function getChestCounts() {
+  const counts = new Map()
+  for (const raw of openChestItems) {
+    const item = normalizeItem(raw)
+    counts.set(item, (counts.get(item) || 0) + 1)
+  }
+  return counts
+}
+
+function renderChestSection(parent) {
+  if (!openChestId) return
+
+  const section = document.createElement("section")
+  section.className = "craft-section chest-section"
+
+  const head = document.createElement("div")
+  head.className = "workbench-head"
+
+  const title = document.createElement("h4")
+  title.className = "craft-title"
+  title.textContent = `Kiste #${openChestId}`
+
+  const closeBtn = document.createElement("button")
+  closeBtn.type = "button"
+  closeBtn.className = "craft-close-btn"
+  closeBtn.textContent = "Schließen"
+  closeBtn.addEventListener("click", closeChestStorage)
+
+  head.appendChild(title)
+  head.appendChild(closeBtn)
+  section.appendChild(head)
+
+  const chestList = document.createElement("div")
+  chestList.className = "inventory-grid"
+
+  const grouped = getChestCounts()
+  if (grouped.size === 0) {
+    const empty = document.createElement("div")
+    empty.className = "inventory-empty"
+    empty.textContent = "Kiste ist leer"
+    chestList.appendChild(empty)
+  } else {
+    for (const [item, amount] of grouped.entries()) {
+      const row = document.createElement("div")
+      row.className = "inventory-item"
+
+      const left = document.createElement("div")
+      left.className = "inventory-item-left"
+
+      const icon = document.createElement("span")
+      icon.className = "inventory-item-icon"
+      icon.textContent = itemIcon(item)
+
+      const name = document.createElement("span")
+      name.className = "inventory-item-name"
+      name.textContent = prettyItemName(item)
+
+      const count = document.createElement("span")
+      count.className = "inventory-item-count"
+      count.textContent = `x${amount}`
+
+      const actions = document.createElement("div")
+      actions.className = "chest-actions"
+
+      const takeOne = document.createElement("button")
+      takeOne.type = "button"
+      takeOne.className = "inventory-item-menu-btn"
+      takeOne.textContent = "Nehmen"
+      takeOne.addEventListener("click", () => {
+        requestChestAction("take_one", openChestId, item, 1)
+      })
+
+      const takeAll = document.createElement("button")
+      takeAll.type = "button"
+      takeAll.className = "inventory-item-menu-btn"
+      takeAll.textContent = "Alles"
+      takeAll.addEventListener("click", () => {
+        requestChestAction("take_all", openChestId, item, amount)
+      })
+
+      actions.appendChild(takeOne)
+      actions.appendChild(takeAll)
+      left.appendChild(icon)
+      left.appendChild(name)
+      row.appendChild(left)
+      row.appendChild(count)
+      row.appendChild(actions)
+      chestList.appendChild(row)
+    }
+  }
+
+  section.appendChild(chestList)
+  parent.appendChild(section)
+}
+
 function updateInventory() {
   inventoryUI.innerHTML = ""
 
@@ -638,7 +963,7 @@ function updateInventory() {
 
   const subtitle = document.createElement("p")
   subtitle.className = "inventory-subtitle"
-  subtitle.textContent = `${inventory.length} Item${inventory.length === 1 ? "" : "s"}`
+  subtitle.textContent = `${inventory.length} Item${inventory.length === 1 ? "" : "s"}${equippedItem ? ` | Ausgerüstet: ${prettyItemName(equippedItem)}` : ""}`
 
   const list = document.createElement("div")
   list.className = "inventory-grid"
@@ -655,6 +980,9 @@ function updateInventory() {
       const card = document.createElement("div")
       card.className = "inventory-item"
       card.draggable = true
+      if (item === equippedItem) {
+        card.classList.add("equipped")
+      }
 
       const left = document.createElement("div")
       left.className = "inventory-item-left"
@@ -676,8 +1004,14 @@ function updateInventory() {
       })
 
       card.addEventListener("click", () => {
-        openItemMenu(card, item)
+        openItemMenu(card, item, amount)
       })
+
+      if (openChestId) {
+        card.addEventListener("dblclick", () => {
+          requestChestAction("store_one", openChestId, item, 1)
+        })
+      }
 
       left.appendChild(icon)
       left.appendChild(name)
@@ -695,12 +1029,24 @@ function updateInventory() {
     renderCraft2x2Section(panel)
   }
   renderWorkbenchSection(panel)
+  renderChestSection(panel)
 
   inventoryUI.appendChild(panel)
 }
 
 document.addEventListener("click", (event) => {
   if (!inventoryUI.contains(event.target)) {
+    if (workbenchCraftOpen) {
+      if (Date.now() < workbenchIgnoreOutsideClickUntil) {
+        return
+      }
+      closeWorkbenchAndInventory()
+      return
+    }
+    if (openChestId) {
+      closeWorkbenchAndInventory()
+      return
+    }
     closeItemMenu()
   }
 })
