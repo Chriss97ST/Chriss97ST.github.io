@@ -8,9 +8,11 @@ const mobileControls = document.getElementById("mobileControls")
 const touchPad = document.getElementById("touchPad")
 const touchKnob = document.getElementById("touchKnob")
 const touchInteract = document.getElementById("touchInteract")
+const touchMount = document.getElementById("touchMount")
 const touchInventory = document.getElementById("touchInventory")
 const touchSprint = document.getElementById("touchSprint")
 const touchJump = document.getElementById("touchJump")
+const touchDismount = document.getElementById("touchDismount")
 const touchChat = document.getElementById("touchChat")
 const touchEmote = document.getElementById("touchEmote")
 const touchPause = document.getElementById("touchPause")
@@ -237,7 +239,7 @@ function resetTouchMove() {
 }
 
 function setupTouchControls() {
-  if (!touchPad || !touchKnob || !touchInteract || !touchInventory || !touchSprint || !touchJump || !touchChat || !touchPause || !touchEmote) {
+  if (!touchPad || !touchKnob || !touchInteract || !touchMount || !touchInventory || !touchSprint || !touchJump || !touchChat || !touchPause || !touchEmote || !touchDismount) {
     return
   }
 
@@ -285,6 +287,14 @@ function setupTouchControls() {
   touchInteract.addEventListener("pointercancel", stopInteractHold)
   touchInteract.addEventListener("pointerleave", stopInteractHold)
 
+  touchMount.addEventListener("pointerdown", (event) => {
+    event.preventDefault()
+    if (!gameActive) return
+    if (typeof tryMountNearestHare === "function") {
+      tryMountNearestHare()
+    }
+  })
+
   touchInventory.addEventListener("pointerdown", (event) => {
     event.preventDefault()
     if (!gameActive) return
@@ -309,7 +319,30 @@ function setupTouchControls() {
   touchJump.addEventListener("pointerdown", (event) => {
     event.preventDefault()
     if (!gameActive) return
+    if (typeof isRidingHare === "function" && isRidingHare() && typeof setHareJumpHold === "function") {
+      setHareJumpHold(true)
+      return
+    }
     queueJump()
+  })
+
+  const releaseTouchJump = () => {
+    if (!gameActive) return
+    if (typeof isRidingHare === "function" && isRidingHare() && typeof setHareJumpHold === "function") {
+      setHareJumpHold(false)
+    }
+  }
+
+  touchJump.addEventListener("pointerup", releaseTouchJump)
+  touchJump.addEventListener("pointercancel", releaseTouchJump)
+  touchJump.addEventListener("pointerleave", releaseTouchJump)
+
+  touchDismount.addEventListener("pointerdown", (event) => {
+    event.preventDefault()
+    if (!gameActive) return
+    if (typeof dismountHare === "function") {
+      dismountHare()
+    }
   })
 
   touchChat.addEventListener("pointerdown", (event) => {
@@ -504,8 +537,10 @@ function animate() {
   const delta = clock ? clock.getDelta() : 0.016
 
   const inputBlocked = isPauseMenuOpen() || Boolean(window.playerFrozen)
+  const mountedOnHare = typeof isRidingHare === "function" && isRidingHare()
+  const rideTransitioning = typeof isRideTransitioning === "function" && isRideTransitioning()
 
-  if (!inputBlocked) {
+  if (!inputBlocked && !mountedOnHare && !rideTransitioning) {
     move()
     physics()
   } else {
@@ -542,6 +577,16 @@ document.addEventListener("keydown", (e) => {
 
   if (isPauseMenuOpen() && e.key !== "Escape") {
     return
+  }
+
+  const ridingHare = typeof isRidingHare === "function" && isRidingHare()
+  const isSpace = e.code === "Space" || e.key === " " || e.key === "Spacebar"
+  if (ridingHare && isSpace) {
+    // Prevent browser button activation on focused ride HUD controls.
+    e.preventDefault()
+    if (document.activeElement && typeof document.activeElement.blur === "function") {
+      document.activeElement.blur()
+    }
   }
 
   setKeyState(e, true)
@@ -603,6 +648,12 @@ game.addEventListener("pointerdown", (event) => {
 
   if (event.pointerType === "touch" && tryPickupByTouch(event, camera, game)) {
     return
+  }
+
+  if (event.pointerType === "touch" || (event.pointerType === "mouse" && event.button === 0)) {
+    if (typeof tryRideHareByClick === "function" && tryRideHareByClick(event, camera, game)) {
+      return
+    }
   }
 
   handleWorldLeftClick(event, camera, game)

@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Animal MMO</title>
-<link rel="stylesheet" href="style.css?v=20260312-sync2">
+<link rel="stylesheet" href="style.css?v=20260312-sync6">
 <script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
 </head>
 <body>
@@ -83,6 +83,14 @@
 </div>
 
 <div id="onlineUsers" class="online-users"></div>
+<div id="rideHudLabel" class="ride-hud-label"></div>
+<div id="rideHudControls" class="ride-hud-controls">
+  <button id="rideControlBtn" class="ride-hud-btn" type="button">Kontrolle</button>
+  <button id="rideDismountBtn" class="ride-hud-btn" type="button">Absteigen</button>
+</div>
+<div id="rideJumpCharge" class="ride-jump-charge" aria-hidden="true">
+  <div id="rideJumpChargeFill" class="ride-jump-charge-fill"></div>
+</div>
 
 <div id="pauseMenu">
   <button onclick="toggleActivePlayersPanel()">Aktive Spieler</button>
@@ -145,6 +153,8 @@
 
   <div class="mobile-left">
     <button id="touchInteract" class="touch-btn" type="button">Interagieren</button>
+    <button id="touchMount" class="touch-btn touch-btn-small touch-mount" type="button">Aufsteigen</button>
+    <button id="touchDismount" class="touch-btn touch-btn-small touch-dismount" type="button">Absteigen</button>
     <button id="touchJump" class="touch-btn touch-btn-small" type="button">Springen</button>
     <button id="touchSprint" class="touch-btn touch-btn-small" type="button">Sprint</button>
   </div>
@@ -157,10 +167,10 @@
   </div>
 </div>
 
-<script src="world.js?v=20260312-sync2"></script>
-<script src="player.js?v=20260312-sync2"></script>
-<script src="multiplayer.js?v=20260312-sync2"></script>
-<script src="animals.js?v=20260312-sync2"></script>
-<script src="main.js?v=20260312-sync2"></script>
+<script src="world.js?v=20260312-sync6"></script>
+<script src="player.js?v=20260312-sync6"></script>
+<script src="multiplayer.js?v=20260312-sync6"></script>
+<script src="animals.js?v=20260312-sync6"></script>
+<script src="main.js?v=20260312-sync6"></script>
 </body>
 </html>

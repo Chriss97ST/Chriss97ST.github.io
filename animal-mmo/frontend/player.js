@@ -340,9 +340,14 @@ function createPlayerModel(gender = "male") {
   const skin = new THREE.MeshStandardMaterial({ color: 0xffcc99, flatShading: true })
   const cloth = new THREE.MeshStandardMaterial({ color: safeGender === "female" ? 0xffb6d9 : 0xb8d7ff, flatShading: true })
   const dark = new THREE.MeshStandardMaterial({ color: 0x23324a, flatShading: true })
+  const shoulderOffset = safeGender === "female" ? 0.58 : 0.66
+  const hipOffset = safeGender === "female" ? 0.28 : 0.23
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.25, 0.55), cloth)
   torso.position.y = 0.2
+  if (safeGender === "female") {
+    torso.scale.x = 0.9
+  }
 
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skin)
   head.position.y = 1.18
@@ -357,27 +362,33 @@ function createPlayerModel(gender = "male") {
   head.add(face)
 
   const armL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), skin)
-  armL.position.set(-0.66, 0.14, 0)
+  armL.position.set(-shoulderOffset, 0.14, 0)
 
   const armR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), skin)
-  armR.position.set(0.66, 0.14, 0)
+  armR.position.set(shoulderOffset, 0.14, 0)
 
   const handAnchor = new THREE.Group()
   handAnchor.position.set(0.02, -0.38, 0.08)
   armR.add(handAnchor)
 
   const legL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.0, 0.3), dark)
-  legL.position.set(-0.23, -0.86, 0)
+  legL.position.set(-hipOffset, -0.86, 0)
 
   const legR = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.0, 0.3), dark)
-  legR.position.set(0.23, -0.86, 0)
+  legR.position.set(hipOffset, -0.86, 0)
 
   if (safeGender === "female") {
+    const hips = new THREE.Mesh(new THREE.BoxGeometry(1.03, 0.34, 0.58), cloth)
+    hips.position.set(0, -0.36, 0)
+
     const breastMat = new THREE.MeshStandardMaterial({ color: 0xffb6d9, flatShading: true })
-    const breastL = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), breastMat)
-    const breastR = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), breastMat)
-    breastL.position.set(-0.14, 0.24, 0.34)
-    breastR.position.set(0.14, 0.24, 0.34)
+    const breastL = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), breastMat)
+    const breastR = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), breastMat)
+    breastL.scale.set(1.0, 0.9, 1.35)
+    breastR.scale.set(1.0, 0.9, 1.35)
+    breastL.position.set(-0.19, 0.43, 0.41)
+    breastR.position.set(0.19, 0.43, 0.41)
+    group.add(hips)
     group.add(breastL)
     group.add(breastR)
   }
@@ -453,6 +464,12 @@ function physics() {
 }
 
 function queueJump() {
+  if (typeof isRidingHare === "function" && isRidingHare()) {
+    if (typeof queueHareJump === "function") {
+      queueHareJump()
+      return
+    }
+  }
   jumpQueued = true
 }
 
@@ -526,6 +543,35 @@ function move() {
     player.rotation.y = Math.atan2(dx, dz)
   }
 }
+
+function getMovementInputState() {
+  let inputX = 0
+  let inputZ = 0
+
+  if (keys["w"]) inputZ -= 1
+  if (keys["s"]) inputZ += 1
+  if (keys["a"]) inputX -= 1
+  if (keys["d"]) inputX += 1
+
+  if (window.touchMove && window.touchMove.active) {
+    inputX += window.touchMove.x
+    inputZ += window.touchMove.y
+  }
+
+  const inputLen = Math.hypot(inputX, inputZ)
+  if (inputLen > 1) {
+    inputX /= inputLen
+    inputZ /= inputLen
+  }
+
+  return {
+    x: inputX,
+    z: inputZ,
+    sprint: Boolean(keys["ShiftLeft"] || window.touchSprintActive)
+  }
+}
+
+window.getMovementInputState = getMovementInputState
 
 function interact() {
   requestActionE()

@@ -5,6 +5,7 @@ import math
 import random
 import time
 import uuid
+from json import JSONDecodeError
 from database import (
         advance_animals_state,
         ensure_animals_state,
@@ -112,6 +113,16 @@ ITEM_ALIASES = {
     "chest": "kiste",
     "kiste": "kiste",
 }
+
+
+def safe_float(value, default: float = 0.0):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    if not math.isfinite(number):
+        return float(default)
+    return number
 
 
 async def send_json(ws: WebSocket, data):
@@ -532,7 +543,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 # Starlette can raise RuntimeError after disconnect during timed receive/cancel windows.
                 break
 
-            msg = json.loads(msg_text)
+            try:
+                msg = json.loads(msg_text)
+            except JSONDecodeError:
+                continue
             msg_type = msg.get("type")
             await sync_players_from_db()
             await tick_animals()
@@ -560,9 +574,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     })
                     continue
 
-                x = float(msg["data"]["x"])
-                y = float(msg["data"]["y"])
-                z = float(msg["data"]["z"])
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
+                x = safe_float(data.get("x"), last_known_pos["x"])
+                y = safe_float(data.get("y"), last_known_pos["y"])
+                z = safe_float(data.get("z"), last_known_pos["z"])
                 update_live_player_position(uid, session_id, x, y, z)
                 last_known_pos["x"] = x
                 last_known_pos["y"] = y
@@ -598,9 +613,9 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
             if msg_type == "player_interact":
                 await sync_players_from_db()
-                data = msg.get("data", {})
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 nearest_uid = None
                 nearest_dist2 = 999999.0
@@ -618,18 +633,18 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 # Interaction is still tracked, but no longer emits a public system chat message.
 
             if msg_type == "save":
-                data = msg["data"]
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 upsert_user_position(
                     uid,
-                    float(data["x"]),
-                    float(data["y"]),
-                    float(data["z"])
+                    safe_float(data.get("x"), last_known_pos["x"]),
+                    safe_float(data.get("y"), last_known_pos["y"]),
+                    safe_float(data.get("z"), last_known_pos["z"])
                 )
 
             if msg_type == "action_e":
-                data = msg.get("data", {})
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 pickup = nearest_pickup(px, pz)
 
@@ -699,10 +714,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     })
 
             if msg_type == "action_chop_tree":
-                data = msg.get("data", {})
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 obj_id = int(data.get("object_id", data.get("tree_id", 0)))
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 row = find_world_object_by_id(obj_id, "tree")
                 if not row:
@@ -769,10 +784,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 })
 
             if msg_type == "action_mine_rock":
-                data = msg.get("data", {})
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 obj_id = int(data.get("object_id", data.get("rock_id", 0)))
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 row = find_world_object_by_id(obj_id, "rock")
                 if not row:
@@ -801,10 +816,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 })
 
             if msg_type == "action_place_workbench":
-                data = msg.get("data", {})
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
-                facing = float(data.get("facing", 0))
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
+                facing = safe_float(data.get("facing"), 0.0)
 
                 if not consume_one_of(uid, ["werkbank"]):
                     continue
@@ -820,10 +835,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 await send_inventory_state(ws, uid)
 
             if msg_type == "action_place_chest":
-                data = msg.get("data", {})
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
-                facing = float(data.get("facing", 0))
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
+                facing = safe_float(data.get("facing"), 0.0)
 
                 if not consume_one_of(uid, ["kiste"]):
                     continue
@@ -839,10 +854,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 await send_inventory_state(ws, uid)
 
             if msg_type == "action_open_chest":
-                data = msg.get("data", {})
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 chest_id = int(data.get("object_id", data.get("chest_id", 0)))
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 row = find_world_object_by_id(chest_id, "chest")
                 if not row:
@@ -866,8 +881,8 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                 chest_id = int(data.get("chest_id", 0))
                 item = normalize_item_name(data.get("item", ""))
                 amount = max(1, int(data.get("amount", 1) or 1))
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 row = find_world_object_by_id(chest_id, "chest")
                 if not row:
@@ -961,12 +976,12 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     if consume_one_of(uid, [item]):
                         info = players.get(uid, {})
                         if info:
-                            px = float(info.get("x", 0))
-                            pz = float(info.get("z", 0))
+                            px = safe_float(info.get("x"), last_known_pos["x"])
+                            pz = safe_float(info.get("z"), last_known_pos["z"])
                         else:
                             pos = load_user_pos(uid)
-                            px = float(pos.get("x", 0))
-                            pz = float(pos.get("z", 0))
+                            px = safe_float(pos.get("x"), last_known_pos["x"])
+                            pz = safe_float(pos.get("z"), last_known_pos["z"])
 
                         drop = spawn_pickup_near(px, pz, item)
                         if drop:
@@ -993,9 +1008,9 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                     await send_inventory_state(ws, uid)
 
                 if action == "plant_tree_seed":
-                    px = float(action_data.get("x", 0))
-                    pz = float(action_data.get("z", 0))
-                    facing = float(action_data.get("facing", 0))
+                    px = safe_float(action_data.get("x"), last_known_pos["x"])
+                    pz = safe_float(action_data.get("z"), last_known_pos["z"])
+                    facing = safe_float(action_data.get("facing"), 0.0)
 
                     if consume_one_of(uid, ["baumsamen", "tree_seed", "treeseed"]):
                         planted = plant_tree_seed_near(px, pz, facing)
@@ -1009,10 +1024,10 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
                         await send_inventory_state(ws, uid)
 
             if msg_type == "action_water_tree":
-                data = msg.get("data", {})
+                data = msg.get("data", {}) if isinstance(msg.get("data"), dict) else {}
                 obj_id = int(data.get("object_id", data.get("tree_id", 0)))
-                px = float(data.get("x", 0))
-                pz = float(data.get("z", 0))
+                px = safe_float(data.get("x"), last_known_pos["x"])
+                pz = safe_float(data.get("z"), last_known_pos["z"])
 
                 row = find_world_object_by_id(obj_id, "tree")
                 if not row:
@@ -1139,12 +1154,12 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
 
                 info = players.get(uid, {})
                 if info:
-                    px = float(info.get("x", 0))
-                    pz = float(info.get("z", 0))
+                    px = safe_float(info.get("x"), last_known_pos["x"])
+                    pz = safe_float(info.get("z"), last_known_pos["z"])
                 else:
                     pos = load_user_pos(uid)
-                    px = float(pos.get("x", 0))
-                    pz = float(pos.get("z", 0))
+                    px = safe_float(pos.get("x"), last_known_pos["x"])
+                    pz = safe_float(pos.get("z"), last_known_pos["z"])
 
                 drop = spawn_pickup_near(px, pz, item)
                 if not drop:
@@ -1175,13 +1190,16 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
     except RuntimeError:
         # Treat runtime websocket state errors like disconnects.
         pass
+    except Exception as exc:
+        # Never let a malformed message or transient DB issue crash the worker process.
+        print(f"[ws:{uid}] unexpected error: {exc}")
     finally:
         admin_sessions.discard(uid)
         upsert_user_position(
             uid,
-            float(last_known_pos.get("x", pos["x"])),
-            float(last_known_pos.get("y", pos["y"])),
-            float(last_known_pos.get("z", pos["z"])),
+            safe_float(last_known_pos.get("x", pos["x"]), pos["x"]),
+            safe_float(last_known_pos.get("y", pos["y"]), pos["y"]),
+            safe_float(last_known_pos.get("z", pos["z"]), pos["z"]),
         )
         remove_live_player(uid, session_id)
         if connections.get(uid) is ws:
