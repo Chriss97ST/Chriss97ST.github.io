@@ -5,6 +5,70 @@ const worldObjectsById = new Map()
 const pickupMeshesById = new Map()
 const worldRaycaster = new THREE.Raycaster()
 const worldPointer = new THREE.Vector2()
+const skyClouds = []
+
+function createCloudTexture() {
+  const canvas = document.createElement("canvas")
+  canvas.width = 256
+  canvas.height = 128
+  const ctx = canvas.getContext("2d")
+
+  ctx.clearRect(0, 0, 256, 128)
+  ctx.fillStyle = "rgba(255,255,255,0.92)"
+  ctx.beginPath()
+  ctx.ellipse(80, 70, 54, 28, 0, 0, Math.PI * 2)
+  ctx.ellipse(124, 62, 52, 30, 0, 0, Math.PI * 2)
+  ctx.ellipse(162, 74, 40, 24, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.needsUpdate = true
+  return tex
+}
+
+function createSkyEnvironment() {
+  const sky = new THREE.Mesh(
+    new THREE.BoxGeometry(900, 900, 900),
+    new THREE.MeshBasicMaterial({ color: 0x9dd8ff, side: THREE.BackSide })
+  )
+  scene.add(sky)
+
+  const cloudTexture = createCloudTexture()
+  for (let i = 0; i < 20; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(18 + Math.random() * 22, 8 + Math.random() * 12),
+      new THREE.MeshBasicMaterial({
+        map: cloudTexture,
+        transparent: true,
+        opacity: 0.58,
+        depthWrite: false
+      })
+    )
+
+    mesh.position.set(
+      -180 + Math.random() * 360,
+      42 + Math.random() * 24,
+      -180 + Math.random() * 360
+    )
+    mesh.rotation.x = -Math.PI * 0.5
+    mesh.rotation.z = Math.random() * Math.PI * 2
+
+    const speed = 1.4 + Math.random() * 2.6
+    skyClouds.push({ mesh, speed })
+    scene.add(mesh)
+  }
+}
+
+function updateSkyEnvironment(delta) {
+  if (!skyClouds.length) return
+  for (const entry of skyClouds) {
+    entry.mesh.position.x += entry.speed * delta
+    if (entry.mesh.position.x > 220) {
+      entry.mesh.position.x = -220
+      entry.mesh.position.z = -180 + Math.random() * 360
+    }
+  }
+}
 
 function createGround() {
   const ground = new THREE.Mesh(

@@ -3,6 +3,7 @@ from database import (
     is_user_banned,
     create_user,
     get_user_id_by_credentials,
+    get_user_gender,
     get_user_position,
     load_inventory,
     user_exists,
@@ -16,6 +17,9 @@ router = APIRouter()
 def register(data: AuthRequest):
     username = data.username.strip()
     password = data.password.strip()
+    gender = str(data.gender or "male").strip().lower()
+    if gender not in ("male", "female"):
+        gender = "male"
 
     if len(username) < 3 or len(password) < 4:
         return {"status": "error", "message": "invalid_input"}
@@ -23,7 +27,7 @@ def register(data: AuthRequest):
     if user_exists(username):
         return {"status": "error", "message": "user_exists"}
 
-    uid = create_user(username, password)
+    uid = create_user(username, password, gender)
 
     return {"status": "ok", "id": uid}
 
@@ -46,5 +50,6 @@ def login(data: AuthRequest):
         "x": pos["x"],
         "y": pos["y"],
         "z": pos["z"],
+        "gender": get_user_gender(uid),
         "inventory": inventory
     }

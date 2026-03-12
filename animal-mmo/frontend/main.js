@@ -381,8 +381,9 @@ async function request(path, payload) {
   return response.json()
 }
 
-async function register(username, password) {
-  const data = await request("/register", { username, password })
+async function register(username, password, gender = "male") {
+  const safeGender = String(gender || "male").toLowerCase() === "female" ? "female" : "male"
+  const data = await request("/register", { username, password, gender: safeGender })
 
   if (data.status !== "ok") {
     if (data.message === "user_exists") {
@@ -460,8 +461,11 @@ function init3D(data) {
   scene.add(ambient)
 
   createGround()
+  if (typeof createSkyEnvironment === "function") {
+    createSkyEnvironment()
+  }
 
-  player = createPlayerModel()
+  player = createPlayerModel(data.gender || "male")
   player.position.set(data.x, data.y, data.z)
   scene.add(player)
 
@@ -510,6 +514,9 @@ function animate() {
   updatePlayerAnimation(delta)
   updateRemotePlayers(delta)
   updateAnimals(delta)
+  if (typeof updateSkyEnvironment === "function") {
+    updateSkyEnvironment(delta)
+  }
 
   cameraFollow()
   sendPos()
@@ -634,13 +641,14 @@ registerForm.addEventListener("submit", async (e) => {
   const username = document.getElementById("registerUser").value.trim()
   const password = document.getElementById("registerPass").value
   const repeat = document.getElementById("registerPass2").value
+  const gender = document.getElementById("registerGender")?.value || "male"
 
   if (password !== repeat) {
     showAuthMessage("Passwörter stimmen nicht überein.", "error")
     return
   }
 
-  await register(username, password)
+  await register(username, password, gender)
 })
 
 tabLogin.addEventListener("click", () => setAuthMode("login"))

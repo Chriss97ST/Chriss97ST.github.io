@@ -51,8 +51,8 @@ function createNameTag(text) {
   return sprite
 }
 
-function createRemotePlayer(name) {
-  const group = createPlayerModel()
+function createRemotePlayer(name, gender = "male") {
+  const group = createPlayerModel(gender)
 
   const tint = new THREE.Color(0xdabf6a)
   for (const child of group.children) {
@@ -82,7 +82,8 @@ function createRemotePlayer(name) {
     typingTag,
     typing: false,
     lastServerUpdateMs: performance.now(),
-    emote: "smile"
+    emote: "smile",
+    gender: String(gender || "male").toLowerCase() === "female" ? "female" : "male"
   }
 }
 
@@ -162,13 +163,24 @@ function updateRemotePlayersSnapshot(snapshot) {
 
     seen.add(uid)
 
+    const nextGender = String(info.gender || "male").toLowerCase() === "female" ? "female" : "male"
+
     let entry = remotePlayers.get(uid)
     if (!entry) {
-      entry = createRemotePlayer(info.name || `Player${uid}`)
+      entry = createRemotePlayer(info.name || `Player${uid}`, nextGender)
       entry.mesh.position.set(info.x || 0, info.y || 1, info.z || 0)
       entry.target.copy(entry.mesh.position)
       remotePlayers.set(uid, entry)
     } else {
+      if (entry.gender !== nextGender) {
+        const prevPos = entry.mesh.position.clone()
+        scene.remove(entry.mesh)
+        entry = createRemotePlayer(info.name || `Player${uid}`, nextGender)
+        entry.mesh.position.copy(prevPos)
+        entry.target.copy(prevPos)
+        remotePlayers.set(uid, entry)
+      }
+
       const dt = Math.max(0.016, (now - entry.lastServerUpdateMs) / 1000)
       const vx = (Number(info.x || 0) - entry.target.x) / dt
       const vy = (Number(info.y || 1) - entry.target.y) / dt

@@ -18,6 +18,7 @@ from database import (
     get_latest_world_event_id,
     get_user_position,
     get_username,
+    get_user_gender,
     is_user_banned as db_is_user_banned,
     ban_user as db_ban_user,
     get_world_obstacles as db_get_world_obstacles,
@@ -223,6 +224,10 @@ def load_user_pos(uid: int):
 
 def load_username(uid: int):
     return get_username(uid)
+
+
+def load_user_gender(uid: int):
+    return get_user_gender(uid)
 
 
 def is_user_banned(uid: int):
@@ -482,7 +487,8 @@ async def websocket_endpoint(ws: WebSocket, uid: int):
     connections[uid] = ws
     pos = load_user_pos(uid)
     name = load_username(uid)
-    upsert_live_player(uid, session_id, name, pos["x"], pos["y"], pos["z"], "", "smile", False)
+    gender = load_user_gender(uid)
+    upsert_live_player(uid, session_id, name, pos["x"], pos["y"], pos["z"], gender, "", "smile", False)
     last_known_pos = {
         "x": float(pos["x"]),
         "y": float(pos["y"]),

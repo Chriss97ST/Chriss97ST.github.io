@@ -50,7 +50,8 @@ with users_lock:
         CREATE TABLE IF NOT EXISTS users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            gender TEXT DEFAULT 'male'
         )
         """
     )
@@ -112,6 +113,22 @@ def _ensure_live_player_columns():
         if "equipped_item" not in existing:
             state_conn.execute("ALTER TABLE live_players ADD COLUMN equipped_item TEXT DEFAULT ''")
             state_conn.commit()
+
+        if "gender" not in existing:
+            state_conn.execute("ALTER TABLE live_players ADD COLUMN gender TEXT DEFAULT 'male'")
+            state_conn.commit()
+
+
+def _ensure_user_columns():
+    with users_lock:
+        existing = {
+            row["name"]
+            for row in users_conn.execute("PRAGMA table_info(users)").fetchall()
+        }
+
+        if "gender" not in existing:
+            users_conn.execute("ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'male'")
+            users_conn.commit()
 
 with inventory_lock:
     inventory_conn.execute(
@@ -864,11 +881,17 @@ def user_exists(username: str):
     return row is not None
 
 
-def create_user(username: str, password: str):
+def _normalize_gender(value: str):
+    key = str(value or "male").strip().lower()
+    return "female" if key == "female" else "male"
+
+
+def create_user(username: str, password: str, gender: str = "male"):
+    safe_gender = _normalize_gender(gender)
     with users_lock:
         cur = users_conn.execute(
-            "INSERT INTO users(username,password) VALUES(?,?)",
-            (username, password)
+            "INSERT INTO users(username,password,gender) VALUES(?,?,?)",
+            (username, password, safe_gender)
         )
         users_conn.commit()
         uid = cur.lastrowid
@@ -913,6 +936,17 @@ def get_username(uid: int):
     return row["username"] if row else f"Player{uid}"
 
 
+def get_user_gender(uid: int):
+    with users_lock:
+        row = users_conn.execute(
+            "SELECT COALESCE(gender,'male') AS gender FROM users WHERE id=?",
+            (uid,)
+        ).fetchone()
+    if not row:
+        return "male"
+    return _normalize_gender(row["gender"])
+
+
 def get_user_position(uid: int):
     with state_lock:
         row = state_conn.execute(
@@ -943,28 +977,31 @@ def upsert_live_player(
     x: float,
     y: float,
     z: float,
+    gender: str = "male",
     equipped_item: str = "",
     emote: str = "smile",
     typing: bool = False
 ):
+    safe_gender = _normalize_gender(gender)
     now = time.time()
     with state_lock:
         state_conn.execute(
             """
-            INSERT INTO live_players(user_id,session_id,name,x,y,z,equipped_item,emote,typing,last_seen)
-            VALUES(?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO live_players(user_id,session_id,name,x,y,z,gender,equipped_item,emote,typing,last_seen)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(user_id) DO UPDATE SET
                 session_id=excluded.session_id,
                 name=excluded.name,
                 x=excluded.x,
                 y=excluded.y,
                 z=excluded.z,
+                gender=excluded.gender,
                 equipped_item=excluded.equipped_item,
                 emote=excluded.emote,
                 typing=excluded.typing,
                 last_seen=excluded.last_seen
             """,
-            (uid, session_id, name, x, y, z, equipped_item, emote, 1 if typing else 0, now)
+            (uid, session_id, name, x, y, z, safe_gender, equipped_item, emote, 1 if typing else 0, now)
         )
         state_conn.commit()
 
@@ -1070,7 +1107,7 @@ def prune_stale_live_players(max_age_seconds: float = 12.0):
 def get_live_players_snapshot():
     with state_lock:
         rows = state_conn.execute(
-            "SELECT user_id,name,x,y,z,equipped_item,emote,typing FROM live_players"
+            "SELECT user_id,name,x,y,z,COALESCE(gender,'male') AS gender,equipped_item,emote,typing FROM live_players"
         ).fetchall()
 
     snapshot = {}
@@ -1080,6 +1117,7 @@ def get_live_players_snapshot():
             "y": row["y"],
             "z": row["z"],
             "name": row["name"],
+            "gender": _normalize_gender(row["gender"]),
             "equipped_item": row["equipped_item"] or "",
             "emote": row["emote"] or "smile",
             "typing": bool(row["typing"])
@@ -1756,6 +1794,7 @@ def _enforce_pine_fruitless():
 
 _ensure_world_object_columns()
 _ensure_live_player_columns()
+_ensure_user_columns()
 _generate_world_once()
 _ensure_world_biomes()
 _backfill_legacy_tree_variation()

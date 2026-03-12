@@ -330,10 +330,15 @@ function setPlayerEmote(emote) {
   setModelFaceEmote(player, emote)
 }
 
-function createPlayerModel() {
+function normalizeGender(gender) {
+  return String(gender || "male").toLowerCase() === "female" ? "female" : "male"
+}
+
+function createPlayerModel(gender = "male") {
+  const safeGender = normalizeGender(gender)
   const group = new THREE.Group()
   const skin = new THREE.MeshStandardMaterial({ color: 0xffcc99, flatShading: true })
-  const cloth = new THREE.MeshStandardMaterial({ color: 0x3a86ff, flatShading: true })
+  const cloth = new THREE.MeshStandardMaterial({ color: safeGender === "female" ? 0xffb6d9 : 0xb8d7ff, flatShading: true })
   const dark = new THREE.MeshStandardMaterial({ color: 0x23324a, flatShading: true })
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.25, 0.55), cloth)
@@ -367,6 +372,16 @@ function createPlayerModel() {
   const legR = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.0, 0.3), dark)
   legR.position.set(0.23, -0.86, 0)
 
+  if (safeGender === "female") {
+    const breastMat = new THREE.MeshStandardMaterial({ color: 0xffb6d9, flatShading: true })
+    const breastL = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), breastMat)
+    const breastR = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), breastMat)
+    breastL.position.set(-0.14, 0.24, 0.34)
+    breastR.position.set(0.14, 0.24, 0.34)
+    group.add(breastL)
+    group.add(breastR)
+  }
+
   group.add(torso)
   group.add(head)
   group.add(armL)
@@ -391,6 +406,7 @@ function createPlayerModel() {
   group.userData.handAnchor = handAnchor
   group.userData.heldItem = ""
   group.userData.heldItemMesh = null
+  group.userData.gender = safeGender
 
   group.userData.collisionRadius = 0.65
   return group
