@@ -223,12 +223,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let orte = [];
-fetch('gasunie_schieber.json')
-    .then(res => res.json())
-    .then(data => {
-        orte = data;
-        fillTable();
-    });
+const DATASET_FILE = 'gasunie_schieber.json';
+const STORAGE_KEY = 'lokation_admin_' + DATASET_FILE;
+
+function loadOrte() {
+    try {
+        const localData = localStorage.getItem(STORAGE_KEY);
+        if (localData) {
+            const parsed = JSON.parse(localData);
+            if (Array.isArray(parsed)) {
+                orte = parsed;
+                fillTable();
+                return;
+            }
+        }
+    } catch (error) {
+        // Fallback to file-based dataset if local storage is invalid.
+    }
+
+    fetch(DATASET_FILE)
+        .then(res => res.json())
+        .then(data => {
+            orte = data;
+            fillTable();
+        });
+}
+
+loadOrte();
 
 const searchInput = document.getElementById('search');
 const resultsBox = document.getElementById('results');

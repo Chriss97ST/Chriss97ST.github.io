@@ -77,6 +77,17 @@
             max-width: 420px;
         }
 
+        .admin-launch {
+            margin-top: 12px;
+            background: linear-gradient(145deg, #1f2d18, #0e1609);
+            border-color: #324b27;
+        }
+
+        .admin-launch:hover {
+            border-color: #5f8651;
+            background: linear-gradient(145deg, #25361d, #15240f);
+        }
+
         /* --- Animierte Buttons / Aurora Style --- */
         .btn {
             font-family: "Segoe UI", Arial, sans-serif;
@@ -134,6 +145,182 @@
             /* keep button size consistent */
             display: flex;
         }
+
+        .admin-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            padding: 16px;
+        }
+
+        .admin-modal.open {
+            display: flex;
+        }
+
+        .admin-card {
+            width: min(1100px, 96vw);
+            max-height: 92vh;
+            overflow: auto;
+            border-radius: 14px;
+            border: 1px solid #2f2f2f;
+            background: #111;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55);
+            padding: 20px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-title {
+            margin: 0;
+            font-size: 1.35rem;
+        }
+
+        .admin-close {
+            border: 1px solid #3b3b3b;
+            background: #1e1e1e;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .admin-close:hover {
+            background: #292929;
+        }
+
+        .admin-login,
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-login.open,
+        .admin-panel.open {
+            display: block;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .admin-input,
+        .admin-select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #191919;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0 14px;
+        }
+
+        .admin-small-btn {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #3d3d3d;
+            background: #1f1f1f;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+
+        .admin-small-btn:hover {
+            background: #2a2a2a;
+        }
+
+        .admin-small-btn.warn {
+            border-color: #704040;
+            background: #2b1717;
+        }
+
+        .admin-small-btn.warn:hover {
+            background: #3a1f1f;
+        }
+
+        .admin-note {
+            color: #c9d6b8;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .admin-error {
+            color: #ff8080;
+            min-height: 20px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .admin-table-wrap {
+            overflow: auto;
+            border: 1px solid #2d2d2d;
+            border-radius: 10px;
+            max-height: 52vh;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 680px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            border: 1px solid #2f2f2f;
+            padding: 8px;
+            text-align: left;
+            background: #171717;
+        }
+
+        .admin-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #222;
+        }
+
+        .admin-delete {
+            border: 1px solid #6a3434;
+            background: #2a1515;
+            color: #ffd0d0;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        .admin-delete:hover {
+            background: #3a1c1c;
+        }
+
+        @media (max-width: 760px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-card {
+                padding: 14px;
+            }
+        }
     </style>
 </head>
 <body class="fade-in">
@@ -154,13 +341,353 @@
         <a class="btn" href="empg_bohrungen.html">EMPG Bohrungen</a>
         <a class="btn" href="empg_schieber.html">EMPG Schieber</a>
         <a class="btn" href="gasunie_schieber.html">Gasunie Schieber</a>
+        <button type="button" class="btn admin-launch" id="openAdmin">Adminbereich</button>
     </div>
 
     <div class="btn-container-bottom">    
         <a href="../index.html" id="backBtn" class="btn">&#128072; Zurück</a>
     </div>
 
+    <div class="admin-modal" id="adminModal" aria-hidden="true">
+        <div class="admin-card">
+            <div class="admin-header">
+                <h3 class="admin-title">Adminbereich Lokationen</h3>
+                <button type="button" class="admin-close" id="closeAdmin">Schließen</button>
+            </div>
+
+            <section class="admin-login open" id="adminLoginBox">
+                <div class="admin-grid">
+                    <input class="admin-input" type="text" id="adminUser" placeholder="Benutzername" autocomplete="username">
+                    <input class="admin-input" type="password" id="adminPassword" placeholder="Passwort" autocomplete="current-password">
+                </div>
+                <div class="admin-actions">
+                    <button type="button" class="admin-small-btn" id="adminLoginBtn">Anmelden</button>
+                </div>
+                <div class="admin-error" id="adminLoginError"></div>
+                <div class="admin-note">Standard-Login: Benutzer admin, Passwort admin123 (im Script änderbar).</div>
+            </section>
+
+            <section class="admin-panel" id="adminPanel">
+                <div class="admin-grid">
+                    <select id="datasetSelect" class="admin-select">
+                        <option value="empg_bohrungen.json">EMPG Bohrungen</option>
+                        <option value="empg_schieber.json">EMPG Schieber</option>
+                        <option value="gasunie_schieber.json">Gasunie Schieber</option>
+                    </select>
+                    <button type="button" class="admin-small-btn" id="adminLogoutBtn">Abmelden</button>
+                </div>
+
+                <div class="admin-actions">
+                    <button type="button" class="admin-small-btn" id="addEntryBtn">Neuen Eintrag hinzufügen</button>
+                    <button type="button" class="admin-small-btn" id="saveAdminChangesBtn">Änderungen speichern</button>
+                    <button type="button" class="admin-small-btn" id="downloadJsonBtn">JSON herunterladen</button>
+                    <button type="button" class="admin-small-btn warn" id="resetDatasetBtn">Auf Datei zurücksetzen</button>
+                </div>
+
+                <div class="admin-note">Hinweis: Browser können lokale JSON-Dateien nicht direkt überschreiben. Änderungen werden im Browser gespeichert und von den Suchseiten automatisch genutzt. Mit Download kannst du eine aktualisierte JSON-Datei exportieren.</div>
+                <div class="admin-error" id="adminPanelError"></div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table" id="adminTable">
+                        <thead>
+                            <tr id="adminTableHeader"></tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
     <script>
+        const ADMIN_USERNAME = "admin";
+        const ADMIN_PASSWORD = "admin123";
+
+        const DATASET_LABELS = {
+            "empg_bohrungen.json": "EMPG Bohrungen",
+            "empg_schieber.json": "EMPG Schieber",
+            "gasunie_schieber.json": "Gasunie Schieber"
+        };
+
+        const DATASET_DEFAULT_FIELDS = {
+            "empg_bohrungen.json": ["ort", "kuerzel", "breite", "laenge"],
+            "empg_schieber.json": ["ort", "breite", "laenge"],
+            "gasunie_schieber.json": ["ort", "breite", "laenge"]
+        };
+
+        const STORAGE_PREFIX = "lokation_admin_";
+
+        const adminModal = document.getElementById("adminModal");
+        const openAdminBtn = document.getElementById("openAdmin");
+        const closeAdminBtn = document.getElementById("closeAdmin");
+        const adminLoginBox = document.getElementById("adminLoginBox");
+        const adminPanel = document.getElementById("adminPanel");
+        const adminUser = document.getElementById("adminUser");
+        const adminPassword = document.getElementById("adminPassword");
+        const adminLoginBtn = document.getElementById("adminLoginBtn");
+        const adminLoginError = document.getElementById("adminLoginError");
+        const adminPanelError = document.getElementById("adminPanelError");
+        const datasetSelect = document.getElementById("datasetSelect");
+        const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+        const addEntryBtn = document.getElementById("addEntryBtn");
+        const saveAdminChangesBtn = document.getElementById("saveAdminChangesBtn");
+        const resetDatasetBtn = document.getElementById("resetDatasetBtn");
+        const downloadJsonBtn = document.getElementById("downloadJsonBtn");
+        const adminTableHeader = document.getElementById("adminTableHeader");
+        const adminTableBody = document.getElementById("adminTableBody");
+
+        let adminAuthenticated = false;
+        let selectedDataset = datasetSelect.value;
+        let datasetFields = [];
+        let workingEntries = [];
+        const baseDatasetCache = {};
+
+        function deepClone(data) {
+            return JSON.parse(JSON.stringify(data));
+        }
+
+        function localStorageKey(datasetName) {
+            return STORAGE_PREFIX + datasetName;
+        }
+
+        async function fetchBaseDataset(datasetName) {
+            if (baseDatasetCache[datasetName]) {
+                return baseDatasetCache[datasetName];
+            }
+
+            const response = await fetch(datasetName);
+            if (!response.ok) {
+                throw new Error("Datei konnte nicht geladen werden: " + datasetName);
+            }
+
+            const data = await response.json();
+            baseDatasetCache[datasetName] = Array.isArray(data) ? data : [];
+            return baseDatasetCache[datasetName];
+        }
+
+        function getStoredDataset(datasetName) {
+            try {
+                const raw = localStorage.getItem(localStorageKey(datasetName));
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : null;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function resolveFieldOrder(datasetName, entries) {
+            const defaults = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
+            const fieldSet = new Set(defaults);
+
+            entries.forEach(entry => {
+                Object.keys(entry || {}).forEach(key => fieldSet.add(key));
+            });
+
+            return Array.from(fieldSet);
+        }
+
+        function renderAdminTable() {
+            adminTableHeader.innerHTML = "";
+            adminTableBody.innerHTML = "";
+
+            datasetFields.forEach(field => {
+                const th = document.createElement("th");
+                th.textContent = field;
+                adminTableHeader.appendChild(th);
+            });
+
+            const actionTh = document.createElement("th");
+            actionTh.textContent = "Aktion";
+            adminTableHeader.appendChild(actionTh);
+
+            workingEntries.forEach((entry, rowIndex) => {
+                const tr = document.createElement("tr");
+
+                datasetFields.forEach(field => {
+                    const td = document.createElement("td");
+                    const input = document.createElement("input");
+                    input.className = "admin-input";
+                    input.value = entry[field] ?? "";
+                    input.type = field === "breite" || field === "laenge" ? "number" : "text";
+                    if (input.type === "number") {
+                        input.step = "any";
+                    }
+
+                    input.addEventListener("input", () => {
+                        if (field === "breite" || field === "laenge") {
+                            const parsed = Number.parseFloat(input.value);
+                            workingEntries[rowIndex][field] = Number.isFinite(parsed) ? parsed : "";
+                            return;
+                        }
+                        workingEntries[rowIndex][field] = input.value;
+                    });
+
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                });
+
+                const actionTd = document.createElement("td");
+                const delBtn = document.createElement("button");
+                delBtn.type = "button";
+                delBtn.className = "admin-delete";
+                delBtn.textContent = "Löschen";
+                delBtn.addEventListener("click", () => {
+                    workingEntries.splice(rowIndex, 1);
+                    renderAdminTable();
+                });
+                actionTd.appendChild(delBtn);
+                tr.appendChild(actionTd);
+
+                adminTableBody.appendChild(tr);
+            });
+        }
+
+        function buildEmptyEntry(datasetName) {
+            const entry = {};
+            const defaults = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
+            defaults.forEach(field => {
+                if (field === "breite" || field === "laenge") {
+                    entry[field] = 0;
+                } else {
+                    entry[field] = "";
+                }
+            });
+            return entry;
+        }
+
+        async function loadDatasetForAdmin(datasetName) {
+            adminPanelError.textContent = "";
+            selectedDataset = datasetName;
+
+            try {
+                const baseData = await fetchBaseDataset(datasetName);
+                const storedData = getStoredDataset(datasetName);
+                workingEntries = deepClone(storedData || baseData);
+                datasetFields = resolveFieldOrder(datasetName, workingEntries);
+                renderAdminTable();
+            } catch (error) {
+                workingEntries = [];
+                datasetFields = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
+                renderAdminTable();
+                adminPanelError.textContent = "Fehler beim Laden: " + error.message;
+            }
+        }
+
+        function openAdminModal() {
+            adminModal.classList.add("open");
+            adminModal.setAttribute("aria-hidden", "false");
+            adminLoginError.textContent = "";
+            adminPanelError.textContent = "";
+
+            if (adminAuthenticated) {
+                adminLoginBox.classList.remove("open");
+                adminPanel.classList.add("open");
+                loadDatasetForAdmin(datasetSelect.value);
+                return;
+            }
+
+            adminLoginBox.classList.add("open");
+            adminPanel.classList.remove("open");
+            adminUser.focus();
+        }
+
+        function closeAdminModal() {
+            adminModal.classList.remove("open");
+            adminModal.setAttribute("aria-hidden", "true");
+        }
+
+        function downloadCurrentDataset() {
+            const serialized = JSON.stringify(workingEntries, null, 2);
+            const blob = new Blob([serialized], { type: "application/json" });
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = selectedDataset;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        }
+
+        openAdminBtn.addEventListener("click", openAdminModal);
+        closeAdminBtn.addEventListener("click", closeAdminModal);
+
+        adminModal.addEventListener("click", event => {
+            if (event.target === adminModal) {
+                closeAdminModal();
+            }
+        });
+
+        adminLoginBtn.addEventListener("click", async () => {
+            adminLoginError.textContent = "";
+
+            const user = adminUser.value.trim();
+            const pw = adminPassword.value;
+
+            if (user !== ADMIN_USERNAME || pw !== ADMIN_PASSWORD) {
+                adminLoginError.textContent = "Ungültiger Login.";
+                return;
+            }
+
+            adminAuthenticated = true;
+            adminLoginBox.classList.remove("open");
+            adminPanel.classList.add("open");
+            adminPassword.value = "";
+            await loadDatasetForAdmin(datasetSelect.value);
+        });
+
+        adminPassword.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                adminLoginBtn.click();
+            }
+        });
+
+        adminLogoutBtn.addEventListener("click", () => {
+            adminAuthenticated = false;
+            adminPanel.classList.remove("open");
+            adminLoginBox.classList.add("open");
+            adminUser.value = "";
+            adminPassword.value = "";
+            workingEntries = [];
+            adminTableBody.innerHTML = "";
+            adminTableHeader.innerHTML = "";
+        });
+
+        datasetSelect.addEventListener("change", async () => {
+            await loadDatasetForAdmin(datasetSelect.value);
+        });
+
+        addEntryBtn.addEventListener("click", () => {
+            const newEntry = buildEmptyEntry(selectedDataset);
+            workingEntries.push(newEntry);
+            datasetFields = resolveFieldOrder(selectedDataset, workingEntries);
+            renderAdminTable();
+        });
+
+        saveAdminChangesBtn.addEventListener("click", () => {
+            localStorage.setItem(localStorageKey(selectedDataset), JSON.stringify(workingEntries));
+            adminPanelError.textContent = "Änderungen gespeichert für " + (DATASET_LABELS[selectedDataset] || selectedDataset) + ".";
+        });
+
+        resetDatasetBtn.addEventListener("click", async () => {
+            const confirmed = window.confirm("Gespeicherte Admin-Änderungen für diese Liste wirklich löschen?");
+            if (!confirmed) {
+                return;
+            }
+
+            localStorage.removeItem(localStorageKey(selectedDataset));
+            adminPanelError.textContent = "Liste auf Originaldatei zurückgesetzt.";
+            await loadDatasetForAdmin(selectedDataset);
+        });
+
+        downloadJsonBtn.addEventListener("click", () => {
+            downloadCurrentDataset();
+            adminPanelError.textContent = "JSON-Datei wurde heruntergeladen.";
+        });
+
         window.onload = () => {
             document.body.classList.add("loaded");
         };
