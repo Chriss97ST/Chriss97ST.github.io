@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f8f6" />
+    <title>WorkNotizApp</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  </head>
+  <body>
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+    
+    <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-two" aria-hidden="true"></div>
+
+    <section class="auth-shell panel">
+      <header class="panel-header">
+        <div class="auth-header-row">
+          <div>
+            <p class="kicker">Benutzerkonto</p>
+            <h2 id="authTitle">Willkommen</h2>
+            <p class="subline" id="authMessage">Bitte registrieren oder anmelden.</p>
+            <button id="moreMenuButton" type="button" class="ghost-btn" hidden>Mehr</button>
+            <div id="moreMenu" class="more-menu" hidden>
+              <p id="currentUserLabel" class="menu-user">Nicht angemeldet</p>
+              <button id="themeToggleButton" type="button" class="menu-item">Darkmode aktivieren</button>
+              <button id="logoutButton" type="button" class="menu-item">Logout</button>
+            </div>
+          </div>
+          <div class="auth-header-actions">
+            <button id="showEntryFormButton" type="button" class="cta" hidden>+ Eintrag erstellen</button>
+            <button id="showSearchButton" type="button" class="ghost-btn" hidden>Suchen</button>
+          </div>
+          <div class="menu-anchor">
+            
+          </div>
+        </div>
+      </header>
+
+      <div id="authActions" class="auth-actions">
+        <button id="showRegisterButton" type="button" class="cta auth-cta">Registrieren</button>
+        <button id="showLoginButton" type="button" class="ghost-btn auth-cta">Login</button>
+      </div>
+
+      <div id="registerPanel" class="auth-panel" hidden>
+        <form id="registerForm" class="auth-form">
+          <h3>Registrieren</h3>
+          <label>
+            Benutzername
+            <input id="registerUsername" type="text" minlength="3" required />
+          </label>
+          <label>
+            Passwort
+            <input id="registerPassword" type="password" minlength="6" required />
+          </label>
+          <div class="auth-panel-actions">
+            <button type="submit" class="ghost-btn">Konto erstellen</button>
+            <button id="cancelRegisterButton" type="button" class="ghost-btn">Zurück</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="loginPanel" class="auth-panel" hidden>
+        <form id="loginForm" class="auth-form">
+          <h3>Login</h3>
+          <label>
+            Benutzername
+            <input id="loginUsername" type="text" required />
+          </label>
+          <label>
+            Passwort
+            <input id="loginPassword" type="password" required />
+          </label>
+          <div class="auth-panel-actions">
+            <button type="submit" class="ghost-btn">Anmelden</button>
+            <button id="cancelLoginButton" type="button" class="ghost-btn">Zurück</button>
+          </div>
+        </form>
+      </div>
+
+    </section>
+
+    <section id="appShell" hidden>
+      <main id="appLayout" class="layout">
+        <section id="entryFormPanel" class="panel main-panel" hidden>
+          <header class="panel-header">
+            <p class="kicker">Schnellerfassen</p>
+            <h2 id="entryFormTitle">Tagesnotiz erstellen</h2>
+            <p class="subline">
+              Notiere Kunde, interne und Kunden-Auftragsnummer, Tätigkeit und ungefähre Dauer in Minuten.
+            </p>
+          </header>
+
+          <form id="entryForm" class="entry-form">
+            <label>
+              Datum
+              <input id="entryDate" type="date" required />
+            </label>
+
+            <label>
+              Kunde
+              <input id="customer" type="text" placeholder="z. B. Muster GmbH" required />
+            </label>
+
+            <label>
+              Interne Auftragsnummer
+              <input id="internalOrder" type="text" placeholder="5100..." required />
+            </label>
+
+            <label>
+              Kunden Auftragsnummer
+              <input id="customerOrder" type="text" placeholder="z.B. KUN-8891" required />
+            </label>
+
+            <label class="full-width">
+              Tätigkeit
+              <textarea id="activity" rows="3" placeholder="Was wurde erledigt?" required></textarea>
+            </label>
+
+            <label>
+              Dauer (Minuten)
+              <input
+                id="duration"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="z. B. 35"
+                required
+              />
+            </label>
+
+            <label>
+              Schnelltag
+              <select id="quickDay">
+                <option value="today">Heute</option>
+                <option value="yesterday">Gestern</option>
+                <option value="manual">Manuell (oben)</option>
+              </select>
+            </label>
+
+            <button id="submitEntryButton" type="submit" class="cta">Eintrag speichern</button>
+            <button id="cancelEditButton" type="button" class="ghost-btn entry-cancel" hidden>
+              Bearbeitung abbrechen
+            </button>
+          </form>
+        </section>
+
+                <section class="panel day-panel">
+          <header class="panel-header">
+            <div id="searchPanel" hidden>
+              <div class="search-row">
+                <input
+                  id="searchInput"
+                  type="search"
+                  placeholder="Suche: Auftragsnummer, Kunde oder Tätigkeit"
+                />
+                <button id="clearSearch" type="button" class="ghost-btn">Suche leeren</button>
+              </div>
+              <p id="searchHint" class="subline">
+                Suche über interne/kundenbezogene Auftragsnummer, Kundenname und Tätigkeit.
+              </p>
+              <section class="compliance-tools" aria-label="Fehlzeiten-Filter">
+                <h3 class="compliance-title">Fehlzeiten-Check</h3>
+                <div class="compliance-grid">
+                  <label class="compliance-field">
+                    Zeitraum
+                    <select id="complianceRange">
+                      <option value="last2weeks">Vergangene 2 Wochen</option>
+                      <option value="last4weeks">Vergangene 4 Wochen</option>
+                      <option value="thisWeek">Aktuelle Woche</option>
+                      <option value="custom">Benutzerdefiniert</option>
+                    </select>
+                  </label>
+                  <label class="compliance-field">
+                    Von
+                    <input id="complianceFrom" type="date" />
+                  </label>
+                  <label class="compliance-field">
+                    Bis
+                    <input id="complianceTo" type="date" />
+                  </label>
+                </div>
+                <div class="compliance-toggles">
+                  <label class="checkline">
+                    <input id="complianceMissingTime" type="checkbox" checked />
+                    Fehlzeiten prüfen
+                  </label>
+                  <label class="checkline">
+                    <input id="complianceMissingInternalOrder" type="checkbox" checked />
+                    Fehlende interne Auftragsnummer prüfen
+                  </label>
+                  <button id="complianceApply" type="button" class="ghost-btn">Filter anwenden</button>
+                </div>
+                <p id="complianceSummary" class="subline compliance-summary"></p>
+                <div id="complianceList" class="compliance-list"></div>
+              </section>
+            </div>
+            <p class="kicker">Detailansicht</p>
+            <h2 id="selectedDayTitle">Noch kein Tag gewählt</h2>
+            <p id="selectedWeekTitle" class="subline"></p>
+          </header>
+          <div id="dayEntries" class="entries"></div>
+        </section>
+
+        <aside class="panel tree-panel">
+          <header class="panel-header">
+            <p class="kicker">Notizbaum</p>
+            <h1>Wochenordner</h1>
+          </header>
+          <div id="treeRoot" class="tree-root"></div>
+        </aside>
+        
+
+      </main>
+    </section>
+
+    <template id="entryTemplate">
+      <article class="entry-card">
+        <div class="entry-top">
+          <p class="entry-customer"></p>
+          <p class="entry-duration"></p>
+        </div>
+        <p class="entry-meta"></p>
+        <p class="entry-order"></p>
+        <p class="entry-activity"></p>
+        <div class="entry-actions">
+          <button type="button" class="ghost-btn entry-edit">Bearbeiten</button>
+        </div>
+      </article>
+    </template>
+
+    <a href="../index.html" class="ghost-btn back-home-button">&#128072; Zurück</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
