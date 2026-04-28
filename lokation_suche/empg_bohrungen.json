@@ -73,31 +73,37 @@
   },
   {
     "ort": "Dötlingen",
-    "kuerzel": "DTLN S",
+    "kuerzel": "DLNG Ü / S01 / Stat. 905",
+    "breite": 52.937039,
+    "laenge": 8.331861
+  },
+  {
+    "ort": "Dötlingen",
+    "kuerzel": "DLNG S02",
     "breite": 52.9315421,
     "laenge": 8.323765
   },
   {
     "ort": "Dötlingen",
-    "kuerzel": "DTLN Z03a",
+    "kuerzel": "DLNG Z03a",
     "breite": 52.9225,
     "laenge": 8.3394444
   },
   {
     "ort": "Dötlingen",
-    "kuerzel": "DTLN Z08",
+    "kuerzel": "DLNG Z08",
     "breite": 52.9152778,
     "laenge": 8.3236111
   },
   {
     "ort": "Dötlingen",
-    "kuerzel": "DTLN Z12",
+    "kuerzel": "DLNG Z12",
     "breite": 52.9172222,
     "laenge": 8.3125
   },
   {
     "ort": "Dötlingen",
-    "kuerzel": "DTLN ZT13",
+    "kuerzel": "DLNG ZT13",
     "breite": 52.9236111,
     "laenge": 8.3313889
   },
