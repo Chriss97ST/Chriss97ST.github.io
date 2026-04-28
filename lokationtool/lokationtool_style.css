@@ -1,0 +1,447 @@
+/* ==============================================
+   Lokationen-Suchmaschine – Gemeinsame Styles
+   ============================================== */
+
+/* --- Lade-Animation Overlay --- */
+#loader {
+    position: fixed;
+    inset: 0;
+    background: #0d0d0d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    animation: fadeOut 0.8s ease 1.2s forwards;
+}
+
+.spinner {
+    width: 42px;
+    height: 42px;
+    border: 4px solid #333;
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; visibility: hidden; }
+}
+
+/* --- Fade-In des Inhalts --- */
+body.fade-in {
+    opacity: 0;
+    transition: opacity 1s ease 0.3s;
+}
+
+body.loaded {
+    opacity: 1;
+}
+
+/* --- Grunddesign (Dark Mode) --- */
+body {
+    margin: 0;
+    background: #0d0d0d;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: white;
+}
+
+/* --- Buttons (Aurora-Style) --- */
+.btn {
+    font-family: "Segoe UI", Arial, sans-serif;
+    position: relative;
+    padding: 18px 25px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 1.2rem;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #1a1a1a, #070707);
+    color: white;
+    border: 1px solid #2a2a2a;
+    overflow: hidden;
+    transition: 0.25s ease;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+    border-color: #666;
+    background: linear-gradient(145deg, #222, #111);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.07);
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+/* Glow-Effekt */
+.btn::before {
+    content: "";
+    position: absolute;
+    top: -90%;
+    left: -90%;
+    width: 280%;
+    height: 280%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.13), transparent 60%);
+    transform: scale(0);
+    transition: 0.45s ease;
+}
+
+.btn:hover::before {
+    transform: scale(1);
+}
+
+
+/* ==============================================
+   Startseite (suchmaschine_index.html)
+   ============================================== */
+
+body.page-index {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+body.page-index h1 {
+    margin-top: 80px;
+    font-size: clamp(2rem, 4vw, 3rem);
+    letter-spacing: 1.2px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+}
+
+.upperTitle {
+    text-align: center;
+}
+
+.button-container {
+    font-family: "Segoe UI", Arial, sans-serif;
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 90%;
+    max-width: 420px;
+}
+
+.admin-launch {
+    margin-top: 12px;
+    background: linear-gradient(145deg, #1f2d18, #0e1609);
+    border-color: #324b27;
+}
+
+.admin-launch:hover {
+    border-color: #5f8651;
+    background: linear-gradient(145deg, #25361d, #15240f);
+}
+
+/* Back-Button (fest, unten links) */
+.btn-container-fixed {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+}
+
+/* --- Admin Modal --- */
+.admin-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 16px;
+}
+
+.admin-modal.open {
+    display: flex;
+}
+
+.admin-card {
+    width: min(1100px, 96vw);
+    max-height: 92vh;
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid #2f2f2f;
+    background: #111;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55);
+    padding: 20px;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.admin-title {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.admin-close {
+    border: 1px solid #3b3b3b;
+    background: #1e1e1e;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.admin-close:hover {
+    background: #292929;
+}
+
+.admin-login,
+.admin-panel {
+    display: none;
+}
+
+.admin-login.open,
+.admin-panel.open {
+    display: block;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.admin-input,
+.admin-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #191919;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0 14px;
+}
+
+.admin-small-btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #3d3d3d;
+    background: #1f1f1f;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.92rem;
+}
+
+.admin-small-btn:hover {
+    background: #2a2a2a;
+}
+
+.admin-small-btn.warn {
+    border-color: #704040;
+    background: #2b1717;
+}
+
+.admin-small-btn.warn:hover {
+    background: #3a1f1f;
+}
+
+.admin-note {
+    color: #c9d6b8;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.admin-error {
+    color: #ff8080;
+    min-height: 20px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.admin-table-wrap {
+    overflow: auto;
+    border: 1px solid #2d2d2d;
+    border-radius: 10px;
+    max-height: 52vh;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 680px;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #2f2f2f;
+    padding: 8px;
+    text-align: left;
+    background: #171717;
+}
+
+.admin-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #222;
+}
+
+.admin-delete {
+    border: 1px solid #6a3434;
+    background: #2a1515;
+    color: #ffd0d0;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.admin-delete:hover {
+    background: #3a1c1c;
+}
+
+@media (max-width: 760px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-card {
+        padding: 14px;
+    }
+}
+
+
+/* ==============================================
+   Suchseite (suche.html)
+   ============================================== */
+
+body.page-suche {
+    padding: 25px;
+}
+
+body.page-suche h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.search-box {
+    margin-bottom: 10px;
+}
+
+.search-box input {
+    font-family: "Segoe UI", Arial, sans-serif;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: white;
+    font-size: 1.1rem;
+    box-sizing: border-box;
+}
+
+.btn-container {
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    width: 100%;
+}
+
+.btn-container-bottom {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 0;
+}
+
+/* Ergebnisbox */
+.result-box {
+    font-family: "Segoe UI", Arial, sans-serif;
+    margin-top: 20px;
+    padding: 18px;
+    background: #111;
+    border-radius: 12px;
+    border: 1px solid #333;
+    display: none;
+    text-align: center;
+}
+
+.result-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    background: #1a1a1a;
+    transition: 0.2s;
+}
+
+.result-item:hover {
+    background: #222;
+}
+
+/* Karte 4:3 */
+#map {
+    width: 100%;
+    aspect-ratio: 4/3;
+    margin-top: 15px;
+    border-radius: 12px;
+    display: none;
+}
+
+/* Tabelle */
+#dataTable {
+    margin-top: 20px;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    display: none;
+}
+
+#dataTable th,
+#dataTable td {
+    padding: 10px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    white-space: nowrap;
+}
+
+#dataTable th {
+    background: #222;
+    font-weight: bold;
+}
+
+#dataTable tbody tr {
+    cursor: pointer;
+    transition: transform 0.08s ease;
+}
+
+#dataTable tbody tr:hover {
+    transform: scale(1.05);
+    outline: 2px solid #23a3ff;
+    background: #2a2a2a;
+}
+
+#dataTable tbody tr:focus {
+    outline: 2px solid #23a3ff;
+    background: #2a2a2a;
+}
