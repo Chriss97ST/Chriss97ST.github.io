@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import os
 from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -237,7 +237,7 @@ def get_entries(dataset: str, db: Session = Depends(get_db)) -> list[EntryOut]:
 def create_entry(
     dataset: str,
     payload: EntryCreate,
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> EntryOut:
     get_current_admin(authorization, db)
@@ -263,7 +263,7 @@ def update_entry(
     dataset: str,
     entry_id: int,
     payload: EntryUpdate,
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> EntryOut:
     get_current_admin(authorization, db)
@@ -298,7 +298,7 @@ def update_entry(
 def delete_entry(
     dataset: str,
     entry_id: int,
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> None:
     get_current_admin(authorization, db)

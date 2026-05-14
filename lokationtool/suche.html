@@ -49,23 +49,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ---- Dataset-Konfiguration ---- */
+const API_BASE = window.location.protocol === 'file:'
+    ? 'http://127.0.0.1:8010/api'
+    : '/lokationtool/api';
+
 const DATASETS = {
     'empg_bohrungen': {
-        file: 'empg_bohrungen.json',
+        dataset: 'empg_bohrungen',
         title: '|| EMPG Bohrungen ||<br>-= Ortsuche =-',
         placeholder: 'Ort / Kürzel eingeben...',
         hasKuerzel: true,
         tableHeaders: ['Ort', 'Kürzel', 'Breite', 'Länge']
     },
     'empg_schieber': {
-        file: 'empg_schieber.json',
+        dataset: 'empg_schieber',
         title: '|| EMPG Schieber ||<br>-= Ortsuche =-',
         placeholder: 'Lokation / Ort eingeben...',
         hasKuerzel: false,
         tableHeaders: ['Ort', 'Breite', 'Länge']
     },
     'gasunie_schieber': {
-        file: 'gasunie_schieber.json',
+        dataset: 'gasunie_schieber',
         title: '|| Gasunie Schieber ||<br>-= Ortsuche =-',
         placeholder: 'Lokation / Ort eingeben...',
         hasKuerzel: false,
@@ -97,30 +101,22 @@ config.tableHeaders.forEach(label => {
 });
 
 /* ---- Daten laden ---- */
-const STORAGE_KEY = 'lokation_admin_' + config.file;
 let orte = [];
 
-function loadOrte() {
+async function loadOrte() {
     try {
-        const localData = localStorage.getItem(STORAGE_KEY);
-        if (localData) {
-            const parsed = JSON.parse(localData);
-            if (Array.isArray(parsed)) {
-                orte = parsed;
-                fillTable();
-                return;
-            }
+        const response = await fetch(`${API_BASE}/export/${config.dataset}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
-    } catch (e) {
-        // Fallback auf Datei
-    }
 
-    fetch(config.file)
-        .then(res => res.json())
-        .then(data => {
-            orte = data;
-            fillTable();
-        });
+        const data = await response.json();
+        orte = Array.isArray(data) ? data : [];
+        fillTable();
+    } catch (e) {
+        resultsBox.innerHTML = '<div class="result-item">Daten konnten nicht geladen werden.</div>';
+        resultsBox.style.display = 'block';
+    }
 }
 
 loadOrte();

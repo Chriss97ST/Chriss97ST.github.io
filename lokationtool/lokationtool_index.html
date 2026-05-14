@@ -55,9 +55,9 @@
             <section class="admin-panel" id="adminPanel">
                 <div class="admin-grid">
                     <select id="datasetSelect" class="admin-select">
-                        <option value="empg_bohrungen.json">EMPG Bohrungen</option>
-                        <option value="empg_schieber.json">EMPG Schieber</option>
-                        <option value="gasunie_schieber.json">Gasunie Schieber</option>
+                        <option value="empg_bohrungen">EMPG Bohrungen</option>
+                        <option value="empg_schieber">EMPG Schieber</option>
+                        <option value="gasunie_schieber">Gasunie Schieber</option>
                     </select>
                     <button type="button" class="admin-small-btn" id="adminLogoutBtn">Abmelden</button>
                 </div>
@@ -66,10 +66,10 @@
                     <button type="button" class="admin-small-btn" id="addEntryBtn">Neuen Eintrag hinzufügen</button>
                     <button type="button" class="admin-small-btn" id="saveAdminChangesBtn">Änderungen speichern</button>
                     <button type="button" class="admin-small-btn" id="downloadJsonBtn">JSON herunterladen</button>
-                    <button type="button" class="admin-small-btn warn" id="resetDatasetBtn">Auf Datei zurücksetzen</button>
+                    <button type="button" class="admin-small-btn warn" id="resetDatasetBtn">Datenbank neu laden</button>
                 </div>
 
-                <div class="admin-note">Hinweis: Browser können lokale JSON-Dateien nicht direkt überschreiben. Änderungen werden im Browser gespeichert und von den Suchseiten automatisch genutzt. Mit Download kannst du eine aktualisierte JSON-Datei exportieren.</div>
+                <div class="admin-note">Hinweis: Änderungen werden direkt in der SQLite-Datenbank gespeichert und sind sofort in der Suche sichtbar. Mit Download kannst du weiterhin einen JSON-Export aus der aktuellen Datenbankansicht erstellen.</div>
                 <div class="admin-error" id="adminPanelError"></div>
 
                 <div class="admin-table-wrap">
@@ -85,22 +85,26 @@
     </div>
 
     <script>
-        const ADMIN_USERNAME = "admin";
-        const ADMIN_PASSWORD = "admin123";
+        const API_BASE = window.location.protocol === "file:"
+            ? "http://127.0.0.1:8010/api"
+            : "/lokationtool/api";
 
-        const DATASET_LABELS = {
-            "empg_bohrungen.json": "EMPG Bohrungen",
-            "empg_schieber.json": "EMPG Schieber",
-            "gasunie_schieber.json": "Gasunie Schieber"
+        const AUTH_TOKEN_KEY = "lokation_admin_token";
+
+        const DATASETS = {
+            empg_bohrungen: {
+                label: "EMPG Bohrungen",
+                fields: ["ort", "kuerzel", "breite", "laenge"]
+            },
+            empg_schieber: {
+                label: "EMPG Schieber",
+                fields: ["ort", "breite", "laenge"]
+            },
+            gasunie_schieber: {
+                label: "Gasunie Schieber",
+                fields: ["ort", "breite", "laenge"]
+            }
         };
-
-        const DATASET_DEFAULT_FIELDS = {
-            "empg_bohrungen.json": ["ort", "kuerzel", "breite", "laenge"],
-            "empg_schieber.json": ["ort", "breite", "laenge"],
-            "gasunie_schieber.json": ["ort", "breite", "laenge"]
-        };
-
-        const STORAGE_PREFIX = "lokation_admin_";
 
         const adminModal = document.getElementById("adminModal");
         const openAdminBtn = document.getElementById("openAdmin");
@@ -121,64 +125,134 @@
         const adminTableHeader = document.getElementById("adminTableHeader");
         const adminTableBody = document.getElementById("adminTableBody");
 
-        let adminAuthenticated = false;
-        let selectedDataset = datasetSelect.value;
-        let datasetFields = [];
+        let adminToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+        let adminAuthenticated = Boolean(adminToken);
+        let selectedDataset = datasetSelect.value || "empg_bohrungen";
         let workingEntries = [];
-        const baseDatasetCache = {};
+        let loadedEntries = [];
 
         function deepClone(data) {
             return JSON.parse(JSON.stringify(data));
         }
 
-        function localStorageKey(datasetName) {
-            return STORAGE_PREFIX + datasetName;
+        function getDatasetConfig(datasetName) {
+            return DATASETS[datasetName] || DATASETS.empg_schieber;
         }
 
-        async function fetchBaseDataset(datasetName) {
-            if (baseDatasetCache[datasetName]) {
-                return baseDatasetCache[datasetName];
-            }
-
-            const response = await fetch(datasetName);
-            if (!response.ok) {
-                throw new Error("Datei konnte nicht geladen werden: " + datasetName);
-            }
-
-            const data = await response.json();
-            baseDatasetCache[datasetName] = Array.isArray(data) ? data : [];
-            return baseDatasetCache[datasetName];
+        function getEditableFields(datasetName) {
+            return getDatasetConfig(datasetName).fields;
         }
 
-        function getStoredDataset(datasetName) {
-            try {
-                const raw = localStorage.getItem(localStorageKey(datasetName));
-                if (!raw) {
-                    return null;
-                }
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed : null;
-            } catch (error) {
-                return null;
-            }
+        function apiUrl(path) {
+            return `${API_BASE}${path}`;
         }
 
-        function resolveFieldOrder(datasetName, entries) {
-            const defaults = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
-            const fieldSet = new Set(defaults);
+        function setAdminStatus(message, isError = false) {
+            adminPanelError.textContent = message;
+            adminPanelError.style.color = isError ? "#f67b7b" : "";
+        }
 
-            entries.forEach(entry => {
-                Object.keys(entry || {}).forEach(key => fieldSet.add(key));
+        function clearAdminStatus() {
+            setAdminStatus("");
+        }
+
+        async function apiRequest(path, options = {}) {
+            const headers = new Headers(options.headers || {});
+
+            if (adminToken && !headers.has("Authorization")) {
+                headers.set("Authorization", `Bearer ${adminToken}`);
+            }
+
+            if (options.body && !headers.has("Content-Type")) {
+                headers.set("Content-Type", "application/json");
+            }
+
+            const response = await fetch(apiUrl(path), {
+                ...options,
+                headers
             });
 
-            return Array.from(fieldSet);
+            if (!response.ok) {
+                let message = `HTTP ${response.status}`;
+
+                try {
+                    const errorPayload = await response.json();
+                    message = errorPayload.detail || errorPayload.message || message;
+                } catch (error) {
+                    try {
+                        message = (await response.text()) || message;
+                    } catch (readError) {
+                        // Keep fallback message.
+                    }
+                }
+
+                const error = new Error(message);
+                error.status = response.status;
+                throw error;
+            }
+
+            if (response.status === 204) {
+                return null;
+            }
+
+            return response.json();
+        }
+
+        function sanitizeValue(value) {
+            return value == null ? "" : String(value).trim();
+        }
+
+        function buildEmptyEntry(datasetName) {
+            const entry = {};
+
+            getEditableFields(datasetName).forEach(field => {
+                entry[field] = field === "breite" || field === "laenge" ? 0 : "";
+            });
+
+            return entry;
+        }
+
+        function normalizeEntryForWrite(entry, datasetName) {
+            const payload = {};
+            const fields = getEditableFields(datasetName);
+
+            fields.forEach(field => {
+                if (field === "breite" || field === "laenge") {
+                    const parsed = Number.parseFloat(entry[field]);
+                    if (!Number.isFinite(parsed)) {
+                        throw new Error(`Ungültiger Zahlenwert für ${field}.`);
+                    }
+                    payload[field] = parsed;
+                    return;
+                }
+
+                const value = sanitizeValue(entry[field]);
+                if (field === "ort" && !value) {
+                    throw new Error("Das Feld Ort darf nicht leer sein.");
+                }
+                payload[field] = field === "kuerzel" ? (value || null) : value;
+            });
+
+            return payload;
+        }
+
+        function entriesEqual(left, right, datasetName) {
+            const fields = getEditableFields(datasetName);
+            return fields.every(field => {
+                if (field === "breite" || field === "laenge") {
+                    return Number(left[field]) === Number(right[field]);
+                }
+                return sanitizeValue(left[field]) === sanitizeValue(right[field]);
+            });
         }
 
         function renderAdminTable() {
             adminTableHeader.innerHTML = "";
             adminTableBody.innerHTML = "";
 
-            datasetFields.forEach(field => {
+            const fields = getEditableFields(selectedDataset);
+
+            fields.forEach(field => {
                 const th = document.createElement("th");
                 th.textContent = field;
                 adminTableHeader.appendChild(th);
@@ -191,12 +265,13 @@
             workingEntries.forEach((entry, rowIndex) => {
                 const tr = document.createElement("tr");
 
-                datasetFields.forEach(field => {
+                fields.forEach(field => {
                     const td = document.createElement("td");
                     const input = document.createElement("input");
                     input.className = "admin-input";
-                    input.value = entry[field] ?? "";
+                    input.value = entry[field] != null ? entry[field] : "";
                     input.type = field === "breite" || field === "laenge" ? "number" : "text";
+
                     if (input.type === "number") {
                         input.step = "any";
                     }
@@ -207,6 +282,7 @@
                             workingEntries[rowIndex][field] = Number.isFinite(parsed) ? parsed : "";
                             return;
                         }
+
                         workingEntries[rowIndex][field] = input.value;
                     });
 
@@ -230,34 +306,31 @@
             });
         }
 
-        function buildEmptyEntry(datasetName) {
-            const entry = {};
-            const defaults = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
-            defaults.forEach(field => {
-                if (field === "breite" || field === "laenge") {
-                    entry[field] = 0;
-                } else {
-                    entry[field] = "";
-                }
-            });
-            return entry;
-        }
-
         async function loadDatasetForAdmin(datasetName) {
-            adminPanelError.textContent = "";
+            clearAdminStatus();
             selectedDataset = datasetName;
+            datasetSelect.value = datasetName;
 
             try {
-                const baseData = await fetchBaseDataset(datasetName);
-                const storedData = getStoredDataset(datasetName);
-                workingEntries = deepClone(storedData || baseData);
-                datasetFields = resolveFieldOrder(datasetName, workingEntries);
+                const data = await apiRequest(`/entries/${datasetName}`);
+                loadedEntries = deepClone(Array.isArray(data) ? data : []);
+                workingEntries = deepClone(loadedEntries);
                 renderAdminTable();
             } catch (error) {
+                if (error.status === 401) {
+                    adminAuthenticated = false;
+                    adminToken = "";
+                    localStorage.removeItem(AUTH_TOKEN_KEY);
+                    adminPanel.classList.remove("open");
+                    adminLoginBox.classList.add("open");
+                    setAdminStatus("Sitzung abgelaufen. Bitte erneut anmelden.", true);
+                    return;
+                }
+
                 workingEntries = [];
-                datasetFields = DATASET_DEFAULT_FIELDS[datasetName] || ["ort", "breite", "laenge"];
+                loadedEntries = [];
                 renderAdminTable();
-                adminPanelError.textContent = "Fehler beim Laden: " + error.message;
+                setAdminStatus("Fehler beim Laden: " + error.message, true);
             }
         }
 
@@ -265,9 +338,9 @@
             adminModal.classList.add("open");
             adminModal.setAttribute("aria-hidden", "false");
             adminLoginError.textContent = "";
-            adminPanelError.textContent = "";
+            clearAdminStatus();
 
-            if (adminAuthenticated) {
+            if (adminAuthenticated && adminToken) {
                 adminLoginBox.classList.remove("open");
                 adminPanel.classList.add("open");
                 loadDatasetForAdmin(datasetSelect.value);
@@ -285,16 +358,67 @@
         }
 
         function downloadCurrentDataset() {
-            const serialized = JSON.stringify(workingEntries, null, 2);
+            const fields = getEditableFields(selectedDataset);
+            const serialized = JSON.stringify(
+                workingEntries.map(entry => {
+                    const exportEntry = {};
+                    fields.forEach(field => {
+                        exportEntry[field] = entry[field];
+                    });
+                    return exportEntry;
+                }),
+                null,
+                2
+            );
+
             const blob = new Blob([serialized], { type: "application/json" });
             const blobUrl = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = blobUrl;
-            link.download = selectedDataset;
+            link.download = `${selectedDataset}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(blobUrl);
+        }
+
+        async function saveWorkingEntries() {
+            const datasetName = selectedDataset;
+            const currentEntries = workingEntries;
+            const originalEntries = loadedEntries;
+            const originalIds = new Set(originalEntries.map(entry => entry.id));
+            const currentIds = new Set(currentEntries.filter(entry => Number.isInteger(entry.id)).map(entry => entry.id));
+
+            for (const entry of currentEntries) {
+                const payload = normalizeEntryForWrite(entry, datasetName);
+
+                if (Number.isInteger(entry.id)) {
+                    const originalEntry = originalEntries.find(item => item.id === entry.id);
+                    if (!originalEntry || !entriesEqual(originalEntry, payload, datasetName)) {
+                        await apiRequest(`/entries/${datasetName}/${entry.id}`, {
+                            method: "PUT",
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                    continue;
+                }
+
+                const created = await apiRequest(`/entries/${datasetName}`, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                entry.id = created.id;
+            }
+
+            for (const entry of originalEntries) {
+                if (!currentIds.has(entry.id)) {
+                    await apiRequest(`/entries/${datasetName}/${entry.id}`, {
+                        method: "DELETE"
+                    });
+                }
+            }
+
+            await loadDatasetForAdmin(datasetName);
         }
 
         openAdminBtn.addEventListener("click", openAdminModal);
@@ -308,20 +432,47 @@
 
         adminLoginBtn.addEventListener("click", async () => {
             adminLoginError.textContent = "";
+            clearAdminStatus();
 
             const user = adminUser.value.trim();
             const pw = adminPassword.value;
 
-            if (user !== ADMIN_USERNAME || pw !== ADMIN_PASSWORD) {
-                adminLoginError.textContent = "Ungültiger Login.";
+            if (!user || !pw) {
+                adminLoginError.textContent = "Bitte Benutzername und Passwort eingeben.";
                 return;
             }
 
-            adminAuthenticated = true;
-            adminLoginBox.classList.remove("open");
-            adminPanel.classList.add("open");
-            adminPassword.value = "";
-            await loadDatasetForAdmin(datasetSelect.value);
+            try {
+                const response = await fetch(apiUrl("/admin/login"), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ username: user, password: pw })
+                });
+
+                if (!response.ok) {
+                    let message = "Ungültiger Login.";
+                    try {
+                        const errorPayload = await response.json();
+                        message = errorPayload.detail || message;
+                    } catch (error) {
+                        // Keep default message.
+                    }
+                    throw new Error(message);
+                }
+
+                const data = await response.json();
+                adminToken = data.access_token;
+                localStorage.setItem(AUTH_TOKEN_KEY, adminToken);
+                adminAuthenticated = true;
+                adminLoginBox.classList.remove("open");
+                adminPanel.classList.add("open");
+                adminPassword.value = "";
+                await loadDatasetForAdmin(datasetSelect.value);
+            } catch (error) {
+                adminLoginError.textContent = error.message;
+            }
         });
 
         adminPassword.addEventListener("keydown", event => {
@@ -332,11 +483,14 @@
 
         adminLogoutBtn.addEventListener("click", () => {
             adminAuthenticated = false;
+            adminToken = "";
+            localStorage.removeItem(AUTH_TOKEN_KEY);
             adminPanel.classList.remove("open");
             adminLoginBox.classList.add("open");
             adminUser.value = "";
             adminPassword.value = "";
             workingEntries = [];
+            loadedEntries = [];
             adminTableBody.innerHTML = "";
             adminTableHeader.innerHTML = "";
         });
@@ -348,33 +502,49 @@
         addEntryBtn.addEventListener("click", () => {
             const newEntry = buildEmptyEntry(selectedDataset);
             workingEntries.push(newEntry);
-            datasetFields = resolveFieldOrder(selectedDataset, workingEntries);
             renderAdminTable();
         });
 
-        saveAdminChangesBtn.addEventListener("click", () => {
-            localStorage.setItem(localStorageKey(selectedDataset), JSON.stringify(workingEntries));
-            adminPanelError.textContent = "Änderungen gespeichert für " + (DATASET_LABELS[selectedDataset] || selectedDataset) + ".";
+        saveAdminChangesBtn.addEventListener("click", async () => {
+            try {
+                await saveWorkingEntries();
+                setAdminStatus(`Änderungen wurden in der Datenbank gespeichert für ${getDatasetConfig(selectedDataset).label}.`);
+            } catch (error) {
+                if (error.status === 401) {
+                    adminAuthenticated = false;
+                    adminToken = "";
+                    localStorage.removeItem(AUTH_TOKEN_KEY);
+                    adminPanel.classList.remove("open");
+                    adminLoginBox.classList.add("open");
+                    setAdminStatus("Speichern fehlgeschlagen: Sitzung abgelaufen. Bitte erneut anmelden.", true);
+                    return;
+                }
+
+                setAdminStatus("Speichern fehlgeschlagen: " + error.message, true);
+            }
         });
 
         resetDatasetBtn.addEventListener("click", async () => {
-            const confirmed = window.confirm("Gespeicherte Admin-Änderungen für diese Liste wirklich löschen?");
+            const confirmed = window.confirm("Ungespeicherte Änderungen dieser Liste wirklich verwerfen und Datenbankstand neu laden?");
             if (!confirmed) {
                 return;
             }
 
-            localStorage.removeItem(localStorageKey(selectedDataset));
-            adminPanelError.textContent = "Liste auf Originaldatei zurückgesetzt.";
             await loadDatasetForAdmin(selectedDataset);
+            setAdminStatus("Liste wurde aus der Datenbank neu geladen.");
         });
 
         downloadJsonBtn.addEventListener("click", () => {
             downloadCurrentDataset();
-            adminPanelError.textContent = "JSON-Datei wurde heruntergeladen.";
+            setAdminStatus("JSON-Export aus dem aktuellen Datenbankstand wurde heruntergeladen.");
         });
 
         window.onload = () => {
             document.body.classList.add("loaded");
+
+            if (adminAuthenticated && adminToken) {
+                adminToken = localStorage.getItem(AUTH_TOKEN_KEY) || adminToken;
+            }
         };
     </script>
 
