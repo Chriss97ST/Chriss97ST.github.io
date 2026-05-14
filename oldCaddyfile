@@ -1,0 +1,42 @@
+chriss97st.ddns.net {
+        handle /chat {
+            root * /home/csx/backend/chat
+            rewrite * /chat_index.html
+            file_server
+        }
+
+        handle_path /chat/* {
+            reverse_proxy 127.0.0.1:8000
+            encode gzip
+
+            header {
+                Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+                X-Content-Type-Options "nosniff"
+                X-Frame-Options "DENY"
+                Referrer-Policy "no-referrer"
+                Permissions-Policy "geolocation=()"
+            }
+        }
+
+        # AniMMO Frontend
+        handle_path /animmo/* {
+            root * /home/csx/backend/animal-mmo/frontend
+            file_server
+        }
+
+        #AniMMO Backend
+        handle_path /animmo/api/* {
+            reverse_proxy 127.0.0.1:8002
+            encode gzip
+
+            header {
+                Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+                X-Content-Type-Options "nosniff"
+                X-Frame-Options "DENY"
+                Referrer-Policy "no-referrer"
+                Permissions-Policy "geolocation=()"
+            }
+        }
+
+
+}

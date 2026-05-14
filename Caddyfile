@@ -1,0 +1,71 @@
+chriss97st.ddns.net {
+
+    # ------------------------------------------------------------------ #
+    # Chat – Frontend                                                      #
+    # ------------------------------------------------------------------ #
+    handle /chat {
+        root * /home/csx/backend/chat
+        rewrite * /chat_index.html
+        file_server
+    }
+
+    # Chat – Backend (FastAPI + WebSocket, Port 8000)
+    handle_path /chat/* {
+        reverse_proxy 127.0.0.1:8000
+        encode gzip
+
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "no-referrer"
+            Permissions-Policy "geolocation=()"
+        }
+    }
+
+    # ------------------------------------------------------------------ #
+    # Animal-MMO – Frontend                                                #
+    # ------------------------------------------------------------------ #
+    handle_path /animmo/* {
+        root * /home/csx/backend/animal-mmo/frontend
+        file_server
+    }
+
+    # Animal-MMO – Backend (Port 8002)
+    handle_path /animmo/api/* {
+        reverse_proxy 127.0.0.1:8002
+        encode gzip
+
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "no-referrer"
+            Permissions-Policy "geolocation=()"
+        }
+    }
+
+    # ------------------------------------------------------------------ #
+    # Lokationtool – Backend (FastAPI, Port 8010)                         #
+    # ------------------------------------------------------------------ #
+    handle_path /lokationtool/api/* {
+        reverse_proxy 127.0.0.1:8010
+        encode gzip
+
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "no-referrer"
+            Permissions-Policy "geolocation=()"
+        }
+    }
+
+    # ------------------------------------------------------------------ #
+    # Startseite + alle statischen Dateien                                 #
+    # ------------------------------------------------------------------ #
+    handle {
+        root * /home/csx/backend/Chriss97ST.github.io
+        file_server
+    }
+}

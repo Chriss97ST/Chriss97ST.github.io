@@ -1,0 +1,52 @@
+name: Deploy to CSx-Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Sync & Restart Services
+    runs-on: debian-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd /home/csx/backend/Chriss97ST.github.io
+
+            # Geänderte Dateien vor dem Pull feststellen
+            git fetch origin main
+            CHANGED=$(git diff --name-only HEAD origin/main)
+            echo "Geänderte Dateien:"
+            echo "$CHANGED"
+
+            # Repo synchronisieren
+            git pull origin main
+
+            # Chat-Backend neu starten, wenn Python-Dateien geändert wurden
+            if echo "$CHANGED" | grep -q "^chat/"; then
+              echo "Starte Chat-Backend neu..."
+              sudo systemctl restart chat-backend
+            fi
+
+            # Lokationtool-Backend neu starten, wenn Python-Dateien geändert wurden
+            if echo "$CHANGED" | grep -q "^lokationtool/backend/"; then
+              echo "Starte Lokationtool-Backend neu..."
+              sudo systemctl restart lokationtool-backend
+            fi
+
+            # Animal-MMO-Backend neu starten, wenn Python-Dateien geändert wurden
+            if echo "$CHANGED" | grep -q "^animal-mmo/backend/"; then
+              echo "Starte Animal-MMO-Backend neu..."
+              sudo systemctl restart animmo-backend
+            fi
+
+            echo "Deployment abgeschlossen."
