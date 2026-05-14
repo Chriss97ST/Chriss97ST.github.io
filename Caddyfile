@@ -1,10 +1,19 @@
 chriss97st.ddns.net {
 
     # ------------------------------------------------------------------ #
-    # Chat – Frontend                                                      #
+    # Startseite + alle statischen Dateien                                 #
+    # ------------------------------------------------------------------ #
+    handle {
+        root * /home/csx/backend/Chriss97ST.github.io
+        file_server
+    }
+
+
+    # ------------------------------------------------------------------ #
+    # Chat – Frontend + Backend                                                     #
     # ------------------------------------------------------------------ #
     handle /chat {
-        root * /home/csx/backend/chat
+        root * /home/csx/backend/Chriss97ST.github.io/chat
         rewrite * /chat_index.html
         file_server
     }
@@ -24,10 +33,10 @@ chriss97st.ddns.net {
     }
 
     # ------------------------------------------------------------------ #
-    # Animal-MMO – Frontend                                                #
+    # Animal-MMO – Frontend + Backend                                               #
     # ------------------------------------------------------------------ #
     handle_path /animmo/* {
-        root * /home/csx/backend/animal-mmo/frontend
+        root * /home/csx/backend/Chriss97ST.github.io/animal-mmo/frontend
         file_server
     }
 
@@ -61,11 +70,5 @@ chriss97st.ddns.net {
         }
     }
 
-    # ------------------------------------------------------------------ #
-    # Startseite + alle statischen Dateien                                 #
-    # ------------------------------------------------------------------ #
-    handle {
-        root * /home/csx/backend/Chriss97ST.github.io
-        file_server
-    }
+    
 }
