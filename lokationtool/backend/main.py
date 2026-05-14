@@ -198,12 +198,14 @@ def startup() -> None:
 
 @app.get("/lokationtool/api/health")
 @app.get("/api/health")
+@app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
 
 
 @app.post("/lokationtool/api/admin/login", response_model=TokenOut)
 @app.post("/api/admin/login", response_model=TokenOut)
+@app.post("/admin/login", response_model=TokenOut)
 def login(payload: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
     user = db.query(AdminUser).filter(AdminUser.username == payload.username).first()
     if not user or not verify_password(payload.password, user.hashed_password):
@@ -215,12 +217,14 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
 
 @app.get("/lokationtool/api/datasets")
 @app.get("/api/datasets")
+@app.get("/datasets")
 def list_datasets() -> dict:
     return {"datasets": sorted(ALLOWED_DATASETS)}
 
 
 @app.get("/lokationtool/api/entries/{dataset}", response_model=list[EntryOut])
 @app.get("/api/entries/{dataset}", response_model=list[EntryOut])
+@app.get("/entries/{dataset}", response_model=list[EntryOut])
 def get_entries(dataset: str, db: Session = Depends(get_db)) -> list[EntryOut]:
     dataset_key = validate_dataset(dataset)
     rows = (
@@ -234,6 +238,7 @@ def get_entries(dataset: str, db: Session = Depends(get_db)) -> list[EntryOut]:
 
 @app.post("/lokationtool/api/entries/{dataset}", response_model=EntryOut, status_code=201)
 @app.post("/api/entries/{dataset}", response_model=EntryOut, status_code=201)
+@app.post("/entries/{dataset}", response_model=EntryOut, status_code=201)
 def create_entry(
     dataset: str,
     payload: EntryCreate,
@@ -259,6 +264,7 @@ def create_entry(
 
 @app.put("/lokationtool/api/entries/{dataset}/{entry_id}", response_model=EntryOut)
 @app.put("/api/entries/{dataset}/{entry_id}", response_model=EntryOut)
+@app.put("/entries/{dataset}/{entry_id}", response_model=EntryOut)
 def update_entry(
     dataset: str,
     entry_id: int,
@@ -295,6 +301,7 @@ def update_entry(
 
 @app.delete("/lokationtool/api/entries/{dataset}/{entry_id}", status_code=204)
 @app.delete("/api/entries/{dataset}/{entry_id}", status_code=204)
+@app.delete("/entries/{dataset}/{entry_id}", status_code=204)
 def delete_entry(
     dataset: str,
     entry_id: int,
@@ -318,6 +325,7 @@ def delete_entry(
 
 @app.get("/lokationtool/api/export/{dataset}")
 @app.get("/api/export/{dataset}")
+@app.get("/export/{dataset}")
 def export_for_legacy_frontend(dataset: str, db: Session = Depends(get_db)) -> list[dict]:
     dataset_key = validate_dataset(dataset)
     rows = (
