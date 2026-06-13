@@ -85,9 +85,10 @@
     </div>
 
     <script>
-        const API_BASE = window.location.protocol === "file:"
-            ? "http://127.0.0.1:8010/api"
-            : "/lokationtool/api";
+        const REMOTE_API_BASE = "https://chriss97st.ddns.net/lokationtool/api";
+        const API_BASE = window.location.hostname === "chriss97st.ddns.net"
+            ? "/lokationtool/api"
+            : REMOTE_API_BASE;
 
         const AUTH_TOKEN_KEY = "lokation_admin_token";
 
