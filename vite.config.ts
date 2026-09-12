@@ -18,20 +18,21 @@ export default defineConfig({
         background_color: '#0d0d11',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: '/',
+        start_url: './',
+        scope: './',
         icons: [
           {
-            src: '/pwa-192x192.svg',
+            src: 'pwa-192x192.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
           },
           {
-            src: '/pwa-512x512.svg',
+            src: 'pwa-512x512.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
           },
           {
-            src: '/pwa-512x512.svg',
+            src: 'pwa-512x512.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any maskable',
