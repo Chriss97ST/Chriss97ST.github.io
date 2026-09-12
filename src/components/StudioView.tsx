@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Upload, Columns, Sparkles, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Upload, Columns, Sparkles, ZoomIn, ZoomOut, Maximize2, RotateCcw } from 'lucide-react';
 import type { RetroSettings } from '../types/retro';
 import { WebGLRetroRenderer } from '../services/webglRenderer';
 import { renderRetroOverlay } from '../services/canvasOverlay';
@@ -10,6 +10,8 @@ interface StudioViewProps {
   onImageLoaded: (img: HTMLImageElement) => void;
   settings: RetroSettings;
   onRandomizeSeed: () => void;
+  onUndoSeed?: () => void;
+  canUndoSeed?: boolean;
 }
 
 export const StudioView: React.FC<StudioViewProps> = ({
@@ -17,6 +19,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onImageLoaded,
   settings,
   onRandomizeSeed,
+  onUndoSeed,
+  canUndoSeed,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const glCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -275,11 +279,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
           <button
             className="toolbar-btn"
             onClick={onRandomizeSeed}
-            title="Zufälligen Unikat-Seed generieren"
+            title="Klicken, um neuen Unikat-Seed zu würfeln"
           >
             <Sparkles size={16} />
             <span>Seed #{settings.seed}</span>
           </button>
+
+          {canUndoSeed && onUndoSeed && (
+            <button
+              className="toolbar-btn"
+              onClick={onUndoSeed}
+              title="Vorherigen Seed wiederherstellen (Rückgängig)"
+            >
+              <RotateCcw size={15} />
+              <span>Rückgängig</span>
+            </button>
+          )}
 
           <div className="zoom-controls">
             <button

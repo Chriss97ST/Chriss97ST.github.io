@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Sparkles, SunMedium, Frame, Shuffle } from 'lucide-react';
+import { Sparkles, SunMedium, Frame, Shuffle, RotateCcw } from 'lucide-react';
 import type { RetroSettings, FrameStyle } from '../types/retro';
 
 interface AdjustmentsPanelProps {
   settings: RetroSettings;
   onChange: (updated: RetroSettings) => void;
   onRandomizeSeed: () => void;
+  onUndoSeed?: () => void;
+  canUndoSeed?: boolean;
 }
 
 type TabType = 'effects' | 'color' | 'overlay';
@@ -14,6 +16,8 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   settings,
   onChange,
   onRandomizeSeed,
+  onUndoSeed,
+  canUndoSeed,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('effects');
 
@@ -72,10 +76,22 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
                 <span className="seed-title">Dynamischer Unikat-Seed #{settings.seed}</span>
                 <span className="seed-desc">Erzeugt zufällige Lichteinfälle, Kratzer & Kornmuster</span>
               </div>
-              <button className="seed-btn" onClick={onRandomizeSeed} title="Neu auswürfeln">
-                <Shuffle size={15} />
-                <span>Neu würfeln</span>
-              </button>
+              <div className="seed-banner-actions">
+                <button className="seed-btn" onClick={onRandomizeSeed} title="Neu auswürfeln">
+                  <Shuffle size={15} />
+                  <span>Neu würfeln</span>
+                </button>
+                {canUndoSeed && onUndoSeed && (
+                  <button
+                    className="seed-btn undo-btn-secondary"
+                    onClick={onUndoSeed}
+                    title="Vorherigen Seed wiederherstellen"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Rückgängig</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Film Grain */}

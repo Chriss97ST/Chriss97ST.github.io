@@ -18,6 +18,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+interface SeedHistoryItem {
+  seed: number
+  lightLeakPosition: number
+}
+
 export function App() {
   const [mode, setMode] = useState<'studio' | 'camera'>('studio')
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
@@ -26,6 +31,12 @@ export function App() {
     const defaultPreset = RETRO_PRESETS.find((p) => p.id === '90s-disposable-cam') || RETRO_PRESETS[0]
     return { ...defaultPreset.settings, seed: Math.floor(Math.random() * 9999) }
   })
+
+  // Seed history for Undo functionality
+  const [seedHistory, setSeedHistory] = useState<SeedHistoryItem[]>(() => [
+    { seed: settings.seed, lightLeakPosition: settings.lightLeakPosition }
+  ])
+  const [seedHistoryIndex, setSeedHistoryIndex] = useState<number>(0)
 
   const [sidebarTab, setSidebarTab] = useState<'presets' | 'adjustments'>('presets')
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true)
@@ -75,16 +86,42 @@ export function App() {
     audioEffects.playDialTick()
   }
 
-  // Re-roll dynamic seed
+  // Re-roll dynamic seed & push to history
   const handleRandomizeSeed = () => {
     const newSeed = Math.floor(Math.random() * 99999)
+    const newPos = Math.floor(Math.random() * 5)
+    
+    setSeedHistory((prev) => {
+      const next = prev.slice(0, seedHistoryIndex + 1)
+      next.push({ seed: newSeed, lightLeakPosition: newPos })
+      return next
+    })
+    setSeedHistoryIndex((prev) => prev + 1)
+
     setSettings((prev) => ({
       ...prev,
       seed: newSeed,
-      lightLeakPosition: Math.floor(Math.random() * 5),
+      lightLeakPosition: newPos,
     }))
     audioEffects.playDialTick()
   }
+
+  // Undo seed change
+  const handleUndoSeed = () => {
+    if (seedHistoryIndex > 0) {
+      const prevIndex = seedHistoryIndex - 1
+      const prevItem = seedHistory[prevIndex]
+      setSeedHistoryIndex(prevIndex)
+      setSettings((prev) => ({
+        ...prev,
+        seed: prevItem.seed,
+        lightLeakPosition: prevItem.lightLeakPosition,
+      }))
+      audioEffects.playDialTick()
+    }
+  }
+
+  const canUndoSeed = seedHistoryIndex > 0
 
   // Reset to default preset
   const handleResetSettings = () => {
@@ -112,6 +149,8 @@ export function App() {
         audioEnabled={audioEnabled}
         onToggleAudio={handleToggleAudio}
         onRandomizeSeed={handleRandomizeSeed}
+        onUndoSeed={handleUndoSeed}
+        canUndoSeed={canUndoSeed}
         onResetSettings={handleResetSettings}
         onOpenExport={() => setShowExportModal(true)}
         canExport={!!imageElement}
@@ -129,9 +168,13 @@ export function App() {
           <div className="camera-fullscreen-container">
             <CameraView
               settings={settings}
+              selectedPresetId={selectedPresetId}
+              onSelectPreset={handleSelectPreset}
               onPhotoCaptured={handlePhotoCaptured}
               onClose={() => setMode('studio')}
               onRandomizeSeed={handleRandomizeSeed}
+              onUndoSeed={handleUndoSeed}
+              canUndoSeed={canUndoSeed}
             />
           </div>
         ) : (
@@ -143,6 +186,8 @@ export function App() {
                 onImageLoaded={(img) => setImageElement(img)}
                 settings={settings}
                 onRandomizeSeed={handleRandomizeSeed}
+                onUndoSeed={handleUndoSeed}
+                canUndoSeed={canUndoSeed}
               />
             </section>
 
@@ -184,6 +229,8 @@ export function App() {
                     settings={settings}
                     onChange={(updated) => setSettings(updated)}
                     onRandomizeSeed={handleRandomizeSeed}
+                    onUndoSeed={handleUndoSeed}
+                    canUndoSeed={canUndoSeed}
                   />
                 )}
               </div>

@@ -7,6 +7,8 @@ interface HeaderProps {
   audioEnabled: boolean;
   onToggleAudio: () => void;
   onRandomizeSeed: () => void;
+  onUndoSeed?: () => void;
+  canUndoSeed?: boolean;
   onResetSettings: () => void;
   onOpenExport: () => void;
   canExport: boolean;
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   audioEnabled,
   onToggleAudio,
   onRandomizeSeed,
+  onUndoSeed,
+  canUndoSeed,
   onResetSettings,
   onOpenExport,
   canExport,
@@ -75,6 +79,16 @@ export const Header: React.FC<HeaderProps> = ({
           <Sparkles size={17} className="sparkle-icon" />
           <span className="btn-text">Unikat (Seed)</span>
         </button>
+
+        {canUndoSeed && onUndoSeed && (
+          <button
+            className="icon-btn"
+            onClick={onUndoSeed}
+            title="Vorherigen Seed wiederherstellen (Rückgängig)"
+          >
+            <RotateCcw size={18} />
+          </button>
+        )}
 
         <button
           className="icon-btn"

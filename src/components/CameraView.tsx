@@ -1,28 +1,71 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { SwitchCamera, Zap, Timer, Sparkles, X } from 'lucide-react';
-import type { RetroSettings } from '../types/retro';
+import {
+  SwitchCamera,
+  Zap,
+  Timer,
+  Sparkles,
+  X,
+  RotateCcw,
+  Dices,
+  Camera,
+  Film,
+  Image as ImageIcon,
+  Sun,
+  Tv,
+  Flame,
+  Laptop,
+  Smartphone,
+  Layers,
+  SunMedium,
+} from 'lucide-react';
+import type { RetroPreset, RetroSettings } from '../types/retro';
+import { RETRO_PRESETS } from '../constants/presets';
 import { WebGLRetroRenderer } from '../services/webglRenderer';
 import { renderRetroOverlay } from '../services/canvasOverlay';
 import { audioEffects } from '../services/audioEffects';
 
 interface CameraViewProps {
   settings: RetroSettings;
+  selectedPresetId: string;
+  onSelectPreset: (preset: RetroPreset) => void;
   onPhotoCaptured: (img: HTMLImageElement) => void;
   onClose: () => void;
   onRandomizeSeed: () => void;
+  onUndoSeed: () => void;
+  canUndoSeed: boolean;
 }
+
+const PRESET_ICONS: Record<string, React.ReactNode> = {
+  Camera: <Camera size={14} />,
+  Film: <Film size={14} />,
+  Image: <ImageIcon size={14} />,
+  Sun: <Sun size={14} />,
+  Tv: <Tv size={14} />,
+  Zap: <Zap size={14} />,
+  Sparkles: <Sparkles size={14} />,
+  Flame: <Flame size={14} />,
+  Laptop: <Laptop size={14} />,
+  Smartphone: <Smartphone size={14} />,
+  Layers: <Layers size={14} />,
+  SunMedium: <SunMedium size={14} />,
+};
 
 export const CameraView: React.FC<CameraViewProps> = ({
   settings,
+  selectedPresetId,
+  onSelectPreset,
   onPhotoCaptured,
   onClose,
   onRandomizeSeed,
+  onUndoSeed,
+  canUndoSeed,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rendererRef = useRef<WebGLRetroRenderer | null>(null);
   const animFrameIdRef = useRef<number | null>(null);
+  const quickFilterScrollRef = useRef<HTMLDivElement>(null);
 
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasTorch, setHasTorch] = useState<boolean>(false);
@@ -216,9 +259,37 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
       {/* Camera Header Bar */}
       <div className="camera-top-bar">
-        <button className="cam-icon-btn" onClick={onClose} title="Schließen & zurück zum Studio">
+        <button
+          className="cam-icon-btn"
+          onClick={onClose}
+          title="Schließen & zurück zum Studio"
+        >
           <X size={20} />
         </button>
+
+        {/* Center: Interactive Seed Controller with Randomize & Undo */}
+        <div className="camera-seed-controller">
+          <button
+            className="cam-seed-badge-btn"
+            onClick={onRandomizeSeed}
+            title="Klicken, um neuen dynamischen Seed zu würfeln (Zufällige Lichteinfälle, Kratzer & Korn)"
+          >
+            <Dices size={16} className="seed-dice-icon" />
+            <span className="seed-badge-label">Seed #{settings.seed}</span>
+            <span className="seed-badge-action">Neu</span>
+          </button>
+
+          {canUndoSeed && (
+            <button
+              className="cam-undo-badge-btn"
+              onClick={onUndoSeed}
+              title="Vorherigen Seed wiederherstellen (Rückgängig)"
+            >
+              <RotateCcw size={14} />
+              <span className="undo-badge-text">Rückgängig</span>
+            </button>
+          )}
+        </div>
 
         <div className="cam-top-actions">
           {hasTorch && (
@@ -241,10 +312,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
           >
             <Timer size={20} />
             {timerSeconds > 0 && <span className="timer-badge">{timerSeconds}s</span>}
-          </button>
-
-          <button className="cam-icon-btn" onClick={onRandomizeSeed} title="Zufälliger Unikat-Seed">
-            <Sparkles size={20} />
           </button>
         </div>
       </div>
@@ -274,11 +341,53 @@ export const CameraView: React.FC<CameraViewProps> = ({
         )}
       </div>
 
+      {/* Quick Filter Selection Strip (Schnellauswahl) */}
+      <div className="camera-quick-filters-container">
+        <div className="camera-quick-filters-strip" ref={quickFilterScrollRef}>
+          {RETRO_PRESETS.map((preset) => {
+            const isSelected = selectedPresetId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                className={`cam-quick-filter-pill ${isSelected ? 'active' : ''}`}
+                onClick={() => onSelectPreset(preset)}
+                title={preset.description}
+              >
+                <div className="filter-pill-icon">
+                  {PRESET_ICONS[preset.iconName] || <Sparkles size={14} />}
+                </div>
+                <div className="filter-pill-info">
+                  <span className="filter-pill-decade">{preset.decade}</span>
+                  <span className="filter-pill-name">{preset.name.replace(/^(19\d\d|20\d\d)s?\s+/i, '')}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Camera Bottom Controls */}
       <div className="camera-bottom-bar">
         <div className="bottom-bar-left">
-          {/* Preset hint */}
-          <span className="live-filter-badge">Echtzeit-Shader: {settings.seed ? `Seed #${settings.seed}` : ''}</span>
+          {/* Preset hint & Clickable Seed */}
+          <button
+            className="cam-bottom-seed-pill"
+            onClick={onRandomizeSeed}
+            title="Klicken, um neuen Unikat-Seed zu würfeln"
+          >
+            <Sparkles size={14} className="sparkle-icon" />
+            <span>Seed #{settings.seed}</span>
+          </button>
+
+          {canUndoSeed && (
+            <button
+              className="cam-bottom-undo-btn"
+              onClick={onUndoSeed}
+              title="Vorherigen Seed wiederherstellen (Rückgängig)"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
         </div>
 
         {/* Shutter Button */}

@@ -702,6 +702,7 @@
   border: 1px solid rgba(251, 133, 0, 0.3);
   border-radius: 10px;
   padding: 10px 14px;
+  gap: 10px;
 }
 
 .seed-info {
@@ -720,6 +721,13 @@
   color: var(--text-muted);
 }
 
+.seed-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .seed-btn {
   display: flex;
   align-items: center;
@@ -732,6 +740,23 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seed-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.seed-btn.undo-btn-secondary {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+}
+
+.seed-btn.undo-btn-secondary:hover {
+  border-color: var(--retro-gold);
+  color: var(--retro-gold);
 }
 
 .control-card {
@@ -933,33 +958,105 @@
 }
 
 .camera-top-bar {
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent);
-  z-index: 10;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 60%, transparent);
+  z-index: 15;
+}
+
+.camera-seed-controller {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(24, 25, 32, 0.75);
+  backdrop-filter: blur(10px);
+  padding: 4px 6px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 183, 3, 0.3);
+}
+
+.cam-seed-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--retro-gold);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cam-seed-badge-btn:hover {
+  background: rgba(255, 183, 3, 0.2);
+  transform: scale(1.03);
+}
+
+.cam-seed-badge-btn:active {
+  transform: scale(0.97);
+}
+
+.seed-dice-icon {
+  color: var(--retro-amber);
+}
+
+.seed-badge-action {
+  font-size: 10px;
+  text-transform: uppercase;
+  background: var(--retro-amber);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.cam-undo-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cam-undo-badge-btn:hover {
+  background: var(--retro-amber);
 }
 
 .cam-top-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cam-icon-btn {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
+  transition: all 0.15s;
+}
+
+.cam-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .cam-icon-btn.active {
@@ -1056,14 +1153,141 @@
   100% { transform: scale(0.9); opacity: 0.8; }
 }
 
+/* Quick Filters Selection Strip */
+.camera-quick-filters-container {
+  position: absolute;
+  bottom: 120px;
+  left: 0;
+  right: 0;
+  padding: 10px 16px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  z-index: 12;
+  overflow-x: auto;
+}
+
+.camera-quick-filters-strip {
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  margin: 0 auto;
+  padding: 2px 4px;
+}
+
+.cam-quick-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(24, 25, 32, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.cam-quick-filter-pill:hover {
+  background: rgba(40, 42, 54, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.cam-quick-filter-pill.active {
+  background: linear-gradient(135deg, rgba(251, 133, 0, 0.9), rgba(217, 93, 0, 0.95));
+  border-color: #fff;
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(251, 133, 0, 0.5);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.filter-pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-pill-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.filter-pill-decade {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.filter-pill-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .camera-bottom-bar {
   height: 120px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 30px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 30%, transparent);
-  z-index: 10;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.95) 40%, transparent);
+  z-index: 14;
+}
+
+.bottom-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cam-bottom-seed-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--retro-gold);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 183, 3, 0.4);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cam-bottom-seed-pill:hover {
+  background: rgba(251, 133, 0, 0.2);
+  border-color: var(--retro-amber);
+  transform: scale(1.05);
+}
+
+.cam-bottom-seed-pill:active {
+  transform: scale(0.95);
+}
+
+.cam-bottom-undo-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cam-bottom-undo-btn:hover {
+  background: var(--retro-amber);
+  transform: scale(1.1);
 }
 
 .live-filter-badge {
