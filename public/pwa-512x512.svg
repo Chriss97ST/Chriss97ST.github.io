@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e28"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb703"/>
+      <stop offset="50%" stop-color="#fb8500"/>
+      <stop offset="100%" stop-color="#e63946"/>
+    </linearGradient>
+    <linearGradient id="lensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#023047"/>
+      <stop offset="100%" stop-color="#219ebc"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="116" fill="none" stroke="url(#goldGrad)" stroke-width="8"/>
+
+  <!-- Camera Body -->
+  <rect x="96" y="150" width="320" height="230" rx="36" fill="#2b2b36" stroke="#444455" stroke-width="8"/>
+  
+  <!-- Camera Top Bar / Viewfinder bump -->
+  <path d="M 170 150 L 200 110 L 312 110 L 342 150 Z" fill="#20202a" stroke="#444455" stroke-width="6"/>
+
+  <!-- Red Recording / Shutter Dot -->
+  <circle cx="150" cy="190" r="14" fill="#e63946"/>
+
+  <!-- Vintage Stripes Accent -->
+  <rect x="96" y="225" width="320" height="10" fill="#fb8500"/>
+  <rect x="96" y="235" width="320" height="10" fill="#ffb703"/>
+  <rect x="96" y="245" width="320" height="10" fill="#8ecae6"/>
+
+  <!-- Camera Outer Lens Rim -->
+  <circle cx="256" cy="275" r="85" fill="#15151c" stroke="url(#goldGrad)" stroke-width="12"/>
+
+  <!-- Camera Inner Lens Glass -->
+  <circle cx="256" cy="275" r="62" fill="url(#lensGrad)"/>
+
+  <!-- Glass Aperture / Glare Reflection -->
+  <ellipse cx="232" cy="250" rx="28" ry="14" transform="rotate(-30 232 250)" fill="rgba(255, 255, 255, 0.45)"/>
+  <circle cx="280" cy="295" r="8" fill="rgba(255, 255, 255, 0.35)"/>
+</svg>

@@ -1,0 +1,97 @@
+:root {
+  --bg-dark: #0f1015;
+  --bg-surface: #181920;
+  --bg-surface-elevated: #22232c;
+  --bg-hover: #2b2d38;
+  --border-subtle: #2d2e38;
+  --border-strong: #404250;
+  
+  --retro-amber: #fb8500;
+  --retro-gold: #ffb703;
+  --retro-red: #e63946;
+  --retro-cyan: #00f0ff;
+  --retro-green: #39ff14;
+
+  --text-primary: #f0f1f5;
+  --text-secondary: #9ea2b0;
+  --text-muted: #676b79;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  user-select: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border-subtle);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--retro-amber);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(251, 133, 0, 0.5);
+  border: 2px solid #ffffff;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
