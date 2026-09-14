@@ -132,6 +132,25 @@ export const CameraView: React.FC<CameraViewProps> = ({
     };
   }, [initCamera]);
 
+  // Release the camera while backgrounded (reduces OS memory pressure/kill risk) and reacquire on return
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
+      } else {
+        initCamera();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [initCamera]);
+
   // Real-time render loop on Canvas
   useEffect(() => {
     if (!canvasRef.current) return;

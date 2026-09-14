@@ -17,7 +17,7 @@ export default defineConfig({
         theme_color: '#121216',
         background_color: '#0d0d11',
         display: 'standalone',
-        orientation: 'portrait-primary',
+        orientation: 'any',
         start_url: './',
         scope: './',
         icons: [
@@ -41,6 +41,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        // Full offline SPA support: unmatched navigations fall back to the shell
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
       },
     }),
   ],

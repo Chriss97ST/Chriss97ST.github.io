@@ -250,9 +250,20 @@ export class WebGLRetroRenderer {
   private posBuffer: WebGLBuffer | null = null;
   private texBuffer: WebGLBuffer | null = null;
   private uniformLocs: Record<string, WebGLUniformLocation | null> = {};
+  private contextLost = false;
+  private handleContextLost = (e: Event) => {
+    e.preventDefault();
+    this.contextLost = true;
+  };
+  private handleContextRestored = () => {
+    this.contextLost = false;
+    this.initGL();
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    canvas.addEventListener('webglcontextlost', this.handleContextLost, false);
+    canvas.addEventListener('webglcontextrestored', this.handleContextRestored, false);
     this.initGL();
   }
 
@@ -381,11 +392,21 @@ export class WebGLRetroRenderer {
     time: number = 0
   ): void {
     const gl = this.gl;
-    if (!gl || !this.program) return;
+    if (!gl || !this.program || this.contextLost) return;
 
     // Check canvas dimensions
-    const width = source instanceof HTMLVideoElement ? source.videoWidth : source.width;
-    const height = source instanceof HTMLVideoElement ? source.videoHeight : source.height;
+    // Use naturalWidth/Height for images: .width/.height can report 0 for
+    // an <img> that was never attached to the DOM (all images here are offscreen).
+    const width = source instanceof HTMLVideoElement
+      ? source.videoWidth
+      : source instanceof HTMLImageElement
+        ? source.naturalWidth || source.width
+        : source.width;
+    const height = source instanceof HTMLVideoElement
+      ? source.videoHeight
+      : source instanceof HTMLImageElement
+        ? source.naturalHeight || source.height
+        : source.height;
 
     if (width === 0 || height === 0) return;
 
@@ -442,5 +463,7 @@ export class WebGLRetroRenderer {
     if (this.texBuffer) this.gl.deleteBuffer(this.texBuffer);
     if (this.program) this.gl.deleteProgram(this.program);
     this.gl = null;
+    this.canvas.removeEventListener('webglcontextlost', this.handleContextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.handleContextRestored);
   }
 }

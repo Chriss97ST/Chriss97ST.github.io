@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Header } from './components/Header'
 import { StudioView } from './components/StudioView'
 import { CameraView } from './components/CameraView'
@@ -9,6 +9,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { RETRO_PRESETS } from './constants/presets'
 import { generateSampleImages } from './constants/sampleImages'
 import { audioEffects } from './services/audioEffects'
+import { loadSession, saveSession } from './services/sessionPersistence'
 import type { RetroPreset, RetroSettings } from './types/retro'
 import { Sliders, Sparkles } from 'lucide-react'
 import './App.css'
@@ -31,6 +32,7 @@ export function App() {
     const defaultPreset = RETRO_PRESETS.find((p) => p.id === '90s-disposable-cam') || RETRO_PRESETS[0]
     return { ...defaultPreset.settings, seed: Math.floor(Math.random() * 9999) }
   })
+  const hasRestoredSession = useRef(false)
 
   // Seed history for Undo functionality
   const [seedHistory, setSeedHistory] = useState<SeedHistoryItem[]>(() => [
@@ -43,17 +45,56 @@ export function App() {
   const [showExportModal, setShowExportModal] = useState<boolean>(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
-  // Load default sample photo on initial mount
+  // Restore last editing session (survives PWA process kills while backgrounded), else load a sample photo
   useEffect(() => {
-    const samples = generateSampleImages()
-    if (samples.length > 0) {
-      const img = new Image()
-      img.onload = () => {
-        setImageElement(img)
+    let cancelled = false
+
+    loadSession().then((session) => {
+      if (cancelled) return
+
+      if (session) {
+        hasRestoredSession.current = true
+        setSelectedPresetId(session.selectedPresetId)
+        setSettings(session.settings)
+        setSeedHistory([{ seed: session.settings.seed, lightLeakPosition: session.settings.lightLeakPosition }])
+        setSeedHistoryIndex(0)
+
+        const img = new Image()
+        img.onload = () => {
+          if (!cancelled) setImageElement(img)
+        }
+        img.src = session.imageDataUrl
+        return
       }
-      img.src = samples[0].dataUrl
+
+      const samples = generateSampleImages()
+      if (samples.length > 0) {
+        const img = new Image()
+        img.onload = () => {
+          if (!cancelled) setImageElement(img)
+        }
+        img.src = samples[0].dataUrl
+      }
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [])
+
+  // Debounced persistence of the active session so background/kill/resume feels instant
+  useEffect(() => {
+    if (!imageElement) return
+    const timer = setTimeout(() => {
+      saveSession({
+        imageDataUrl: imageElement.src,
+        settings,
+        selectedPresetId,
+        updatedAt: Date.now(),
+      })
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [imageElement, settings, selectedPresetId])
 
   // Listen for PWA BeforeInstallPrompt
   useEffect(() => {

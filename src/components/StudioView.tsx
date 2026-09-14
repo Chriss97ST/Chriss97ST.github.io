@@ -23,9 +23,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
   canUndoSeed,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const glCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRetroRenderer | null>(null);
+  // State (not a plain ref) so the WebGL renderer initializes as soon as the
+  // canvas actually mounts -- it only appears once an image is loaded.
+  const [glCanvasEl, setGlCanvasEl] = useState<HTMLCanvasElement | null>(null);
 
   const [compareSplit, setCompareSplit] = useState<number>(50);
   const [isComparing, setIsComparing] = useState<boolean>(false);
@@ -38,21 +40,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setSampleImages(generateSampleImages());
   }, []);
 
-  // Initialize WebGL renderer
+  // Initialize WebGL renderer once the canvas node exists
   useEffect(() => {
-    if (!glCanvasRef.current) return;
-    const renderer = new WebGLRetroRenderer(glCanvasRef.current);
+    if (!glCanvasEl) return;
+    const renderer = new WebGLRetroRenderer(glCanvasEl);
     rendererRef.current = renderer;
 
     return () => {
       renderer.destroy();
       rendererRef.current = null;
     };
-  }, []);
+  }, [glCanvasEl]);
 
   // Render loop whenever image or settings change
   const renderFrame = useCallback(() => {
-    if (!imageElement || !glCanvasRef.current || !overlayCanvasRef.current || !rendererRef.current) return;
+    if (!imageElement || !glCanvasEl || !overlayCanvasRef.current || !rendererRef.current) return;
 
     const overlayCanvas = overlayCanvasRef.current;
     const w = imageElement.naturalWidth || imageElement.width || 800;
@@ -103,7 +105,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       // Full Retro mode: Draw all 2D overlays
       renderRetroOverlay(oCtx, w, h, settings);
     }
-  }, [imageElement, settings, isComparing, compareSplit]);
+  }, [imageElement, settings, isComparing, compareSplit, glCanvasEl]);
 
   useEffect(() => {
     renderFrame();
@@ -152,8 +154,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingSplit || !glCanvasRef.current) return;
-    const rect = glCanvasRef.current.getBoundingClientRect();
+    if (!isDraggingSplit || !glCanvasEl) return;
+    const rect = glCanvasEl.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const percent = Math.round((x / rect.width) * 100);
     setCompareSplit(percent);
@@ -184,7 +186,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           >
             <div className="canvas-frame-outer">
               {/* WebGL Canvas */}
-              <canvas ref={glCanvasRef} className="main-render-canvas" />
+              <canvas ref={setGlCanvasEl} className="main-render-canvas" />
 
               {/* Overlay 2D Canvas */}
               <canvas

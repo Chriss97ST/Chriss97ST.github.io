@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background-color: var(--bg-dark);
@@ -17,6 +18,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
   z-index: 20;
   flex-shrink: 0;
 }
@@ -1654,7 +1658,29 @@
   cursor: pointer;
 }
 
-/* Mobile Responsive Tweaks */
+/* ============================================================
+   Responsive Breakpoints
+   Desktop (default): >1024px — side-by-side workspace
+   Tablet: 640px–1024px — narrower sidebar, condensed header
+   Mobile: <640px — stacked layout, bottom-sheet sidebar, big touch targets
+   ============================================================ */
+
+/* Tablet & small laptop */
+@media (max-width: 1024px) {
+  .sidebar-section {
+    width: 320px;
+  }
+
+  .main-render-canvas {
+    max-width: calc(100vw - 340px);
+  }
+
+  .samples-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile phones & narrow tablets */
 @media (max-width: 900px) {
   .workspace-split {
     flex-direction: column;
@@ -1662,27 +1688,232 @@
 
   .sidebar-section {
     width: 100%;
-    height: 45vh;
+    height: 46vh;
+    height: 46dvh;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .viewport-section {
+    min-height: 0;
   }
 
   .main-render-canvas {
     max-width: 100%;
-    max-height: 45vh;
+    max-height: 100%;
+  }
+
+  .canvas-viewport {
+    padding: 12px;
   }
 
   .header-container {
-    padding: 0 12px;
+    padding: 0 10px;
+    height: 56px;
+    gap: 6px;
   }
 
   .logo-tagline {
     display: none;
   }
 
+  .logo-title {
+    font-size: 15px;
+  }
+
   .btn-text {
     display: none;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .action-btn,
+  .icon-btn {
+    padding: 8px;
+  }
+
+  .pill-btn span {
+    display: none;
+  }
+
+  .pill-btn {
+    padding: 8px 12px;
   }
 
   .modal-body-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Export modal becomes a fullscreen sheet on small screens */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .export-modal-card {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .export-preview-box {
+    min-height: 240px;
+  }
+
+  /* Floating viewport toolbar wraps and stays reachable with a thumb */
+  .viewport-toolbar {
+    max-width: calc(100% - 24px);
+    flex-wrap: wrap;
+    justify-content: center;
+    bottom: 12px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .toolbar-btn span {
+    display: none;
+  }
+
+  .zoom-controls {
+    padding-left: 6px;
+  }
+
+  .samples-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .preset-card {
+    padding: 12px;
+  }
+
+  .decade-tab-btn {
+    padding: 8px 12px;
+  }
+
+  /* Camera UI: shrink chrome to leave more room for the live preview */
+  .camera-top-bar {
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .cam-icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .camera-seed-controller {
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  .seed-badge-label {
+    display: none;
+  }
+
+  .undo-badge-text {
+    display: none;
+  }
+
+  .camera-quick-filters-container {
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 10px;
+  }
+
+  .cam-quick-filter-pill {
+    padding: 5px 10px;
+  }
+
+  .camera-bottom-bar {
+    height: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding: 0 16px env(safe-area-inset-bottom, 0px);
+  }
+
+  .shutter-outer-ring {
+    width: 68px;
+    height: 68px;
+  }
+
+  .shutter-inner-button {
+    width: 54px;
+    height: 54px;
+  }
+
+  .cam-flip-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .cam-bottom-seed-pill span {
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
+
+/* Small phones in portrait */
+@media (max-width: 480px) {
+  .sidebar-nav-btn span {
+    font-size: 12px;
+  }
+
+  .adj-tab-btn span {
+    display: none;
+  }
+
+  .frame-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .samples-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .countdown-number {
+    font-size: 80px;
+  }
+
+  .pwa-install-banner {
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pwa-banner-actions {
+    justify-content: space-between;
+  }
+}
+
+/* Landscape phones: camera bottom bar can shrink further, quick filters float higher */
+@media (max-height: 480px) and (orientation: landscape) {
+  .camera-top-bar {
+    height: 48px;
+  }
+
+  .camera-bottom-bar {
+    height: 84px;
+  }
+
+  .camera-quick-filters-container {
+    bottom: 84px;
+    padding: 4px 10px;
+  }
+
+  .shutter-outer-ring {
+    width: 56px;
+    height: 56px;
+  }
+
+  .shutter-inner-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+

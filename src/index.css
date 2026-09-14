@@ -37,12 +37,15 @@ html, body {
   font-size: 15px;
   line-height: 1.5;
   user-select: none;
+  overscroll-behavior-y: none;
 }
 
 #root {
   width: 100%;
   height: 100%;
+  /* Use dvh so mobile browser UI chrome doesn't clip the layout or cause jumpy resizes */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -72,18 +75,22 @@ input[type="range"] {
   appearance: none;
   width: 100%;
   height: 6px;
+  /* Larger invisible hitbox so touch input can grab the thin track easily */
+  padding: 14px 0;
+  background-clip: content-box;
   background: var(--border-subtle);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
   transition: background 0.15s;
+  touch-action: pan-y;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--retro-amber);
   cursor: pointer;
@@ -95,3 +102,16 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.15);
 }
+
+/* Comfortable minimum touch target size for all interactive controls */
+@media (pointer: coarse) {
+  button,
+  .toolbar-btn,
+  .icon-btn,
+  .zoom-btn,
+  .mini-pill,
+  .cam-icon-btn {
+    min-height: 40px;
+  }
+}
+
