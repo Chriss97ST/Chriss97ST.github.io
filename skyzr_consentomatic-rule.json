@@ -1,0 +1,68 @@
+
+{
+  "skyzr.com": {
+    "detectors": [
+      {
+        "present": [
+          "div:has-text('Cookie')",
+          "div:has-text('Datenschutz')",
+          "div[role='dialog']",
+          "div[role='region']"
+        ]
+      }
+    ],
+    "methods": [
+      {
+        "name": "OPEN_SETTINGS",
+        "action": "click",
+        "target": "button:has-text('Einstellungen'), button:has-text('Anpassen'), button:has-text('Optionen'), a:has-text('Einstellungen')",
+        "delay": 200
+      }
+    ],
+    "categories": {
+      "ANALYTICS": {
+        "detectors": [
+          {
+            "present": [
+              "label:has-text('Analyse')",
+              "label:has-text('Statistik')",
+              "div:has-text('Analytics')"
+            ]
+          }
+        ],
+        "methods": [
+          {
+            "name": "DISABLE_ANALYTICS",
+            "action": "uncheck",
+            "target": "label:has-text('Analyse') input, label:has-text('Statistik') input, div:has-text('Analyse') input[type='checkbox']"
+          }
+        ]
+      },
+      "MARKETING": {
+        "detectors": [
+          {
+            "present": [
+              "label:has-text('Marketing')",
+              "label:has-text('Werbung')",
+              "label:has-text('Personalisierung')"
+            ]
+          }
+        ],
+        "methods": [
+          {
+            "name": "DISABLE_MARKETING",
+            "action": "uncheck",
+            "target": "label:has-text('Marketing') input, label:has-text('Werbung') input, div:has-text('Marketing') input[type='checkbox']"
+          }
+        ]
+      }
+    },
+    "custom": [
+      {
+        "name": "SAVE_SETTINGS",
+        "action": "click",
+        "target": "button:has-text('Speichern'), button:has-text('Auswahl speichern'), button:has-text('Nur notwendige'), button:has-text('Bestätigen')"
+      }
+    ]
+  }
+}
